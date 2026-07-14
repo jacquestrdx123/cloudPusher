@@ -14,7 +14,17 @@ class ProcessPushNotification implements ShouldQueue
 {
     use Queueable;
 
-    public function __construct(public PushNotification $pushNotification) {}
+    public int $tries = 3;
+
+    /**
+     * @var array<int, int>
+     */
+    public array $backoff = [10, 30, 60];
+
+    public function __construct(public PushNotification $pushNotification)
+    {
+        $this->onQueue(config('pushservice.queue'));
+    }
 
     /**
      * Resolve the target recipients and fan out the notification.
@@ -28,10 +38,11 @@ class ProcessPushNotification implements ShouldQueue
 
         $notification->update([
             'recipients_count' => $recipients->count(),
-            'status' => PushNotification::STATUS_SENT,
         ]);
 
         if ($recipients->isEmpty()) {
+            FinalizePushNotificationStatus::dispatch($notification);
+
             return;
         }
 
@@ -42,6 +53,9 @@ class ProcessPushNotification implements ShouldQueue
             channels: $notification->channels,
             data: $notification->data ?? [],
         ));
+
+        FinalizePushNotificationStatus::dispatch($notification)
+            ->delay(now()->addSeconds((int) config('pushservice.finalize_delay_seconds', 10)));
     }
 
     /**
@@ -50,6 +64,13 @@ class ProcessPushNotification implements ShouldQueue
     private function recipients(): Collection
     {
         $notification = $this->pushNotification;
+
+        if ($notification->target_type === PushNotification::TARGET_BROADCAST) {
+            return User::query()
+                ->with('deviceTokens')
+                ->where('company_id', $notification->company_id)
+                ->get();
+        }
 
         if ($notification->target_type === PushNotification::TARGET_USER) {
             $user = User::with('deviceTokens')->find($notification->user_id);

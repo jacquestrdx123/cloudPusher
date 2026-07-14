@@ -27,7 +27,10 @@ class PushNotificationResource extends JsonResource
             'payload' => $this->data,
             'channels' => $this->channels,
             'recipients_count' => $this->recipients_count,
+            'scheduled_at' => $this->scheduled_at,
             'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
+            'deliveries' => NotificationDeliveryResource::collection($this->whenLoaded('deliveries')),
         ];
     }
 }
