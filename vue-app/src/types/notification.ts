@@ -9,27 +9,28 @@ export interface AppSettings {
 
 export interface ReceivedNotification {
   id: string
+  serverId: number | null
   title: string
   body: string | null
   payload: Record<string, unknown>
   channel: string
-  receivedAt: string
+  deliveredAt: string
+  readAt: string | null
   read: boolean
   source: 'push' | 'sync'
 }
 
 export interface InboxApiItem {
   id: number
+  title: string
+  body: string | null
+  payload: Record<string, unknown>
   channel: string
-  status: string
-  sent_at: string | null
+  delivered_at: string | null
+  read_at: string | null
+  read: boolean
   created_at: string
-  notification: {
-    id: number
-    title: string
-    body: string | null
-    payload: Record<string, unknown>
-  }
+  push_notification_id: number
 }
 
 export interface PaginatedResponse<T> {

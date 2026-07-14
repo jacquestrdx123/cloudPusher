@@ -94,4 +94,6 @@ Install from the browser menu. Background notifications require Firebase configu
 ## API endpoints used
 
 - `POST /api/v1/{company}/device-tokens` — register push token
-- `GET /api/v1/{company}/inbox?user[email]=...` — sync notification history
+- `GET /api/v1/{company}/inbox?user[email]=...` — sync stored notifications (`delivered_at`, `read_at`)
+- `PATCH /api/v1/{company}/inbox/{id}/read` — mark one notification read
+- `PATCH /api/v1/{company}/inbox/read-all` — mark all read

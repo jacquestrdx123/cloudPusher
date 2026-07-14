@@ -2,12 +2,12 @@
 
 namespace App\Http\Resources\Api;
 
-use App\Models\NotificationDelivery;
+use App\Models\UserNotification;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @mixin NotificationDelivery
+ * @mixin UserNotification
  */
 class InboxItemResource extends JsonResource
 {
@@ -18,18 +18,15 @@ class InboxItemResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'title' => $this->title,
+            'body' => $this->body,
+            'payload' => $this->data,
             'channel' => $this->channel,
-            'status' => $this->status,
-            'error' => $this->error,
-            'sent_at' => $this->sent_at,
+            'delivered_at' => $this->delivered_at,
+            'read_at' => $this->read_at,
+            'read' => $this->isRead(),
             'created_at' => $this->created_at,
-            'notification' => [
-                'id' => $this->pushNotification->id,
-                'title' => $this->pushNotification->title,
-                'body' => $this->pushNotification->body,
-                'payload' => $this->pushNotification->data,
-                'channels' => $this->pushNotification->channels,
-            ],
+            'push_notification_id' => $this->push_notification_id,
         ];
     }
 }

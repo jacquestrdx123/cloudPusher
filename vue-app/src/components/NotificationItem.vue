@@ -57,7 +57,7 @@ const notificationIcon = computed(() => {
 })
 
 const formattedTime = computed(() => {
-  const date = new Date(props.notification.receivedAt)
+  const date = new Date(props.notification.deliveredAt)
 
   return date.toLocaleString(undefined, {
     month: 'short',

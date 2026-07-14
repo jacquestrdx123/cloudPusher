@@ -141,12 +141,12 @@ async function handleRefresh(event: RefresherCustomEvent): Promise<void> {
   event.target.complete()
 }
 
-function markAllRead(): void {
-  store.markAllRead()
+async function markAllRead(): Promise<void> {
+  await store.markAllRead(settings.value ?? undefined)
 }
 
-function openNotification(notification: ReceivedNotification): void {
-  store.markRead(notification.id)
+async function openNotification(notification: ReceivedNotification): Promise<void> {
+  await store.markRead(notification.id, settings.value ?? undefined)
   router.push(`/tabs/inbox/${encodeURIComponent(notification.id)}`)
 }
 

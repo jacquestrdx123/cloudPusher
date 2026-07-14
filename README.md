@@ -78,6 +78,16 @@ GET /api/v1/{company_slug}/notifications?per_page=25
 GET /api/v1/{company_slug}/notifications/{id}
 ```
 
+### User inbox (stored notifications)
+
+Each successfully delivered notification is stored per user with `delivered_at` and `read_at`:
+
+```http
+GET /api/v1/{company_slug}/inbox?user[email]=you@company.com
+PATCH /api/v1/{company_slug}/inbox/{id}/read?user[email]=you@company.com
+PATCH /api/v1/{company_slug}/inbox/read-all?user[email]=you@company.com
+```
+
 ### Register a device token
 
 ```http

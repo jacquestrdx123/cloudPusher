@@ -17,7 +17,8 @@
         </ion-card-header>
         <ion-card-content>
           <p v-if="notification.body">{{ notification.body }}</p>
-          <ion-note>{{ formattedTime }}</ion-note>
+          <ion-note>{{ formattedDeliveredAt }}</ion-note>
+          <ion-note v-if="notification.readAt">Read {{ formattedReadAt }}</ion-note>
         </ion-card-content>
       </ion-card>
 
@@ -73,12 +74,20 @@ const payloadEntries = computed(() =>
   Object.entries(notification.value?.payload ?? {}),
 )
 
-const formattedTime = computed(() => {
+const formattedDeliveredAt = computed(() => {
   if (!notification.value) {
     return ''
   }
 
-  return new Date(notification.value.receivedAt).toLocaleString()
+  return new Date(notification.value.deliveredAt).toLocaleString()
+})
+
+const formattedReadAt = computed(() => {
+  if (!notification.value?.readAt) {
+    return ''
+  }
+
+  return new Date(notification.value.readAt).toLocaleString()
 })
 
 function formatValue(value: unknown): string {

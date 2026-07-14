@@ -28,6 +28,15 @@ Route::prefix('v1/{company:slug}')
         Route::get('inbox', [InboxController::class, 'index'])
             ->name('api.v1.inbox.index');
 
+        Route::patch('inbox/read-all', [InboxController::class, 'markAllRead'])
+            ->name('api.v1.inbox.mark-all-read');
+
+        Route::get('inbox/{inbox}', [InboxController::class, 'show'])
+            ->name('api.v1.inbox.show');
+
+        Route::patch('inbox/{inbox}/read', [InboxController::class, 'markRead'])
+            ->name('api.v1.inbox.mark-read');
+
         Route::post('notifications', [NotificationController::class, 'store'])
             ->name('api.v1.notifications.store');
     });

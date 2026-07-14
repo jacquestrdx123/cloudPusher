@@ -1,17 +1,19 @@
 import { defineStore } from 'pinia'
-import { fetchInbox } from '@/services/api'
+import { fetchInbox, markAllInboxRead, markInboxRead } from '@/services/api'
 import { loadCachedInbox, saveCachedInbox } from '@/services/storage'
 import type { AppSettings, InboxApiItem, ReceivedNotification } from '@/types/notification'
 
 function inboxItemToNotification(item: InboxApiItem): ReceivedNotification {
   return {
-    id: `sync-${item.id}`,
-    title: item.notification.title,
-    body: item.notification.body,
-    payload: item.notification.payload ?? {},
+    id: `inbox-${item.id}`,
+    serverId: item.id,
+    title: item.title,
+    body: item.body,
+    payload: item.payload ?? {},
     channel: item.channel,
-    receivedAt: item.sent_at ?? item.created_at,
-    read: true,
+    deliveredAt: item.delivered_at ?? item.created_at,
+    readAt: item.read_at,
+    read: item.read,
     source: 'sync',
   }
 }
@@ -21,19 +23,17 @@ function pushPayloadToNotification(payload: {
   body: string | null
   data: Record<string, unknown>
 }): ReceivedNotification {
-  const id = String(
-    payload.data.push_notification_id ??
-      payload.data.id ??
-      `push-${Date.now()}`,
-  )
+  const pushNotificationId = payload.data.push_notification_id
 
   return {
-    id: `push-${id}`,
+    id: pushNotificationId ? `push-${pushNotificationId}` : `push-${Date.now()}`,
+    serverId: null,
     title: payload.title,
     body: payload.body,
     payload: payload.data,
     channel: 'push',
-    receivedAt: new Date().toISOString(),
+    deliveredAt: new Date().toISOString(),
+    readAt: null,
     read: false,
     source: 'push',
   }
@@ -54,7 +54,7 @@ export const useNotificationStore = defineStore('notifications', {
     sortedItems: (state) =>
       [...state.items].sort(
         (a, b) =>
-          new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime(),
+          new Date(b.deliveredAt).getTime() - new Date(a.deliveredAt).getTime(),
       ),
   },
 
@@ -92,20 +92,44 @@ export const useNotificationStore = defineStore('notifications', {
       return notification
     },
 
-    markRead(id: string): void {
+    async markRead(id: string, settings?: AppSettings): Promise<void> {
       const item = this.items.find((entry) => entry.id === id)
 
-      if (item) {
-        item.read = true
-        void this.persistCache()
+      if (!item || item.read) {
+        return
       }
+
+      item.read = true
+      item.readAt = new Date().toISOString()
+
+      if (settings && item.serverId !== null) {
+        try {
+          const updated = await markInboxRead(settings, item.serverId)
+          item.read = updated.read
+          item.readAt = updated.read_at
+        } catch {
+          // Keep optimistic read state locally.
+        }
+      }
+
+      await this.persistCache()
     },
 
-    markAllRead(): void {
+    async markAllRead(settings?: AppSettings): Promise<void> {
+      if (settings) {
+        try {
+          await markAllInboxRead(settings)
+        } catch {
+          // Fall through to local update.
+        }
+      }
+
       this.items.forEach((item) => {
         item.read = true
+        item.readAt = item.readAt ?? new Date().toISOString()
       })
-      void this.persistCache()
+
+      await this.persistCache()
     },
 
     async syncInbox(settings: AppSettings): Promise<void> {
@@ -118,12 +142,13 @@ export const useNotificationStore = defineStore('notifications', {
 
         const merged = new Map<string, ReceivedNotification>()
 
-        for (const item of [...synced, ...this.items]) {
-          const key = `${item.title}-${item.receivedAt}`
-          const existing = merged.get(key)
+        for (const item of synced) {
+          merged.set(item.serverId ? `inbox-${item.serverId}` : item.id, item)
+        }
 
-          if (!existing || (!item.read && existing.read)) {
-            merged.set(key, item)
+        for (const item of this.items) {
+          if (item.source === 'push' && item.serverId === null) {
+            merged.set(item.id, item)
           }
         }
 

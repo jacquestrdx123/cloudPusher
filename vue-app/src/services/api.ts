@@ -24,6 +24,12 @@ function apiUrl(settings: AppSettings, path: string): string {
   return `${base}/api/v1/${settings.companySlug}${path}`
 }
 
+function userQuery(settings: AppSettings): string {
+  return new URLSearchParams({
+    'user[email]': settings.userEmail,
+  }).toString()
+}
+
 async function request<T>(
   settings: AppSettings,
   path: string,
@@ -96,6 +102,25 @@ export async function fetchInbox(
   })
 
   return request<PaginatedResponse<InboxApiItem>>(settings, `/inbox?${params}`)
+}
+
+export async function markInboxRead(
+  settings: AppSettings,
+  inboxId: number,
+): Promise<InboxApiItem> {
+  const response = await request<{ data: InboxApiItem }>(
+    settings,
+    `/inbox/${inboxId}/read?${userQuery(settings)}`,
+    { method: 'PATCH' },
+  )
+
+  return response.data
+}
+
+export async function markAllInboxRead(settings: AppSettings): Promise<void> {
+  await request(settings, `/inbox/read-all?${userQuery(settings)}`, {
+    method: 'PATCH',
+  })
 }
 
 export async function testConnection(settings: AppSettings): Promise<boolean> {
