@@ -24,7 +24,7 @@ it('sends to a single targeted user over the requested channel', function () {
     });
 
     expect($notification->fresh())
-        ->status->toBe(PushNotification::STATUS_SENT)
+        ->status->toBe(PushNotification::STATUS_PROCESSING)
         ->recipients_count->toBe(1);
 });
 

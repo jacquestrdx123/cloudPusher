@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\Company;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /*
@@ -47,4 +49,16 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * @param  array<string, mixed>  $payload
+ */
+function storeNotification(Company $company, array $payload, ?string $token = null): TestResponse
+{
+    return test()->postJson(
+        route('api.v1.notifications.store', $company),
+        $payload,
+        ['Authorization' => 'Bearer '.($token ?? $company->hmac_secret)],
+    );
 }

@@ -2,13 +2,15 @@
 
 namespace App\Http\Requests;
 
-use App\Models\PushNotification;
+use App\Http\Concerns\ValidatesNotificationPayload;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class WebhookPushRequest extends FormRequest
 {
+    use ValidatesNotificationPayload;
+
     /**
      * The signature middleware already authenticated the caller.
      */
@@ -18,42 +20,55 @@ class WebhookPushRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
-        return [
-            'target' => ['required', 'array'],
-            'target.type' => ['required', Rule::in([PushNotification::TARGET_USER, PushNotification::TARGET_GROUP])],
-            'target.id' => ['nullable', 'integer'],
-            'target.email' => ['nullable', 'email'],
-            'target.slug' => ['nullable', 'string'],
-            'title' => ['required', 'string', 'max:255'],
-            'body' => ['nullable', 'string', 'max:2000'],
-            'data' => ['nullable', 'array'],
-            'channels' => ['nullable', 'array'],
-            'channels.*' => [Rule::in(['push', 'mail', 'sms'])],
-        ];
+        return $this->notificationPayloadRules();
     }
 
-    protected function withValidator(\Illuminate\Validation\Validator $validator): void
+    protected function withValidator(Validator $validator): void
     {
-        $validator->after(function (\Illuminate\Validation\Validator $validator): void {
-            $target = $this->input('target', []);
-            $type = $target['type'] ?? null;
-
-            $hasUserRef = isset($target['id']) || isset($target['email']);
-            $hasGroupRef = isset($target['id']) || isset($target['slug']);
-
-            if ($type === PushNotification::TARGET_USER && ! $hasUserRef) {
-                $validator->errors()->add('target', 'A user target requires "id" or "email".');
-            }
-
-            if ($type === PushNotification::TARGET_GROUP && ! $hasGroupRef) {
-                $validator->errors()->add('target', 'A group target requires "id" or "slug".');
-            }
+        $validator->after(function (Validator $validator): void {
+            $this->validateNotificationTarget($validator);
         });
+    }
+
+    /**
+     * @return array{
+     *     target: array{type: string, id?: int|null, email?: string|null, slug?: string|null},
+     *     title: string,
+     *     body?: string|null,
+     *     data?: array<string, mixed>|null,
+     *     channels?: array<int, string>|null,
+     *     scheduled_at?: string|null
+     * }
+     */
+    public function payload(): array
+    {
+        $payload = [
+            'target' => $this->targetPayload(),
+            'title' => $this->string('title')->toString(),
+        ];
+
+        if ($this->filled('body')) {
+            $payload['body'] = $this->string('body')->toString();
+        }
+
+        if ($this->filled('data')) {
+            $payload['data'] = $this->array('data');
+        }
+
+        if ($this->filled('channels')) {
+            /** @var array<int, string> $channels */
+            $channels = $this->array('channels');
+            $payload['channels'] = $channels;
+        }
+
+        if ($this->filled('scheduled_at')) {
+            $payload['scheduled_at'] = $this->string('scheduled_at')->toString();
+        }
+
+        return $payload;
     }
 }

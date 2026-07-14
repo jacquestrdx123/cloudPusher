@@ -107,6 +107,14 @@ class Company extends Model implements HasCurrentTenantLabel, HasName
     }
 
     /**
+     * @return HasMany<UserNotification, $this>
+     */
+    public function userNotifications(): HasMany
+    {
+        return $this->hasMany(UserNotification::class);
+    }
+
+    /**
      * Channels used when a webhook payload does not specify any.
      *
      * @return array<int, string>

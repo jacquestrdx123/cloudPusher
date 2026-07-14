@@ -22,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property array<int, string> $channels
  * @property string $status
  * @property int $recipients_count
+ * @property Carbon|null $scheduled_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Company $company
@@ -30,7 +31,7 @@ use Illuminate\Support\Carbon;
  */
 #[Fillable([
     'company_id', 'target_type', 'user_id', 'user_group_id',
-    'title', 'body', 'data', 'channels', 'status', 'recipients_count',
+    'title', 'body', 'data', 'channels', 'status', 'recipients_count', 'scheduled_at',
 ])]
 class PushNotification extends Model
 {
@@ -41,13 +42,19 @@ class PushNotification extends Model
 
     public const string TARGET_GROUP = 'group';
 
+    public const string TARGET_BROADCAST = 'broadcast';
+
     public const string STATUS_PENDING = 'pending';
+
+    public const string STATUS_SCHEDULED = 'scheduled';
 
     public const string STATUS_PROCESSING = 'processing';
 
     public const string STATUS_SENT = 'sent';
 
     public const string STATUS_FAILED = 'failed';
+
+    public const string STATUS_PARTIAL = 'partial';
 
     /**
      * @var array<string, mixed>
@@ -65,6 +72,7 @@ class PushNotification extends Model
         return [
             'data' => 'array',
             'channels' => 'array',
+            'scheduled_at' => 'datetime',
         ];
     }
 

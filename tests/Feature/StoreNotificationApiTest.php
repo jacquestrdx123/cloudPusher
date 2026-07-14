@@ -7,18 +7,6 @@ use App\Models\User;
 use App\Models\UserGroup;
 use Illuminate\Support\Facades\Queue;
 
-/**
- * @param  array<string, mixed>  $payload
- */
-function storeNotification(Company $company, array $payload, ?string $token = null): Illuminate\Testing\TestResponse
-{
-    return test()->postJson(
-        route('api.v1.notifications.store', $company),
-        $payload,
-        ['Authorization' => 'Bearer '.($token ?? $company->hmac_secret)],
-    );
-}
-
 it('rejects notifications without a valid company token', function () {
     $company = Company::factory()->create();
 

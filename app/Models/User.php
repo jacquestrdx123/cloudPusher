@@ -92,6 +92,14 @@ class User extends Authenticatable implements FilamentUser, HasDefaultTenant, Ha
     }
 
     /**
+     * @return HasMany<UserNotification, $this>
+     */
+    public function userNotifications(): HasMany
+    {
+        return $this->hasMany(UserNotification::class);
+    }
+
+    /**
      * @param  Builder<User>  $query
      * @return Builder<User>
      */
@@ -105,6 +113,9 @@ class User extends Authenticatable implements FilamentUser, HasDefaultTenant, Ha
         return $this->is_admin;
     }
 
+    /**
+     * @return Collection<int, Company>
+     */
     public function getTenants(Panel $panel): Collection
     {
         if ($this->is_admin) {

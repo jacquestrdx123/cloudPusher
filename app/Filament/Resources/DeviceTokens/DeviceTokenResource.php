@@ -7,6 +7,7 @@ use App\Filament\Resources\DeviceTokens\Pages\EditDeviceToken;
 use App\Filament\Resources\DeviceTokens\Pages\ListDeviceTokens;
 use App\Filament\Resources\DeviceTokens\Schemas\DeviceTokenForm;
 use App\Filament\Resources\DeviceTokens\Tables\DeviceTokensTable;
+use App\Http\Middleware\ApplyTenantScopes;
 use App\Models\DeviceToken;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -22,7 +23,7 @@ class DeviceTokenResource extends Resource
 
     /**
      * Device tokens belong to a company through users, so tenant scoping is
-     * applied via {@see \App\Http\Middleware\ApplyTenantScopes}.
+     * applied via {@see ApplyTenantScopes}.
      */
     protected static bool $isScopedToTenant = false;
 

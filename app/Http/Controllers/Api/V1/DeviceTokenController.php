@@ -23,7 +23,7 @@ class DeviceTokenController extends Controller
         RegisterDeviceToken $registerDeviceToken,
     ): JsonResponse {
         try {
-            $deviceToken = $registerDeviceToken->handle($company, $request->validated());
+            $deviceToken = $registerDeviceToken->handle($company, $request->payload());
         } catch (InvalidArgumentException $exception) {
             return response()->json([
                 'message' => $exception->getMessage(),

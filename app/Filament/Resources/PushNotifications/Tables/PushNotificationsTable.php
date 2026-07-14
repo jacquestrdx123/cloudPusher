@@ -24,9 +24,14 @@ class PushNotificationsTable
                 TextColumn::make('target_type')
                     ->label('Target')
                     ->badge()
-                    ->formatStateUsing(fn (PushNotification $record): string => $record->target_type === PushNotification::TARGET_USER
-                        ? 'User: '.$record->user->name
-                        : 'Group: '.$record->group->name),
+                    ->formatStateUsing(function (PushNotification $record): string {
+                        return match ($record->target_type) {
+                            PushNotification::TARGET_USER => 'User: '.$record->user->name,
+                            PushNotification::TARGET_GROUP => 'Group: '.$record->group->name,
+                            PushNotification::TARGET_BROADCAST => 'Broadcast',
+                            default => $record->target_type,
+                        };
+                    }),
                 TextColumn::make('title')
                     ->searchable()
                     ->limit(40),
@@ -37,8 +42,10 @@ class PushNotificationsTable
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         PushNotification::STATUS_SENT => 'success',
+                        PushNotification::STATUS_PARTIAL => 'warning',
                         PushNotification::STATUS_FAILED => 'danger',
                         PushNotification::STATUS_PROCESSING => 'warning',
+                        PushNotification::STATUS_SCHEDULED => 'info',
                         default => 'gray',
                     }),
                 TextColumn::make('recipients_count')
@@ -53,8 +60,10 @@ class PushNotificationsTable
                 SelectFilter::make('status')
                     ->options([
                         PushNotification::STATUS_PENDING => 'Pending',
+                        PushNotification::STATUS_SCHEDULED => 'Scheduled',
                         PushNotification::STATUS_PROCESSING => 'Processing',
                         PushNotification::STATUS_SENT => 'Sent',
+                        PushNotification::STATUS_PARTIAL => 'Partial',
                         PushNotification::STATUS_FAILED => 'Failed',
                     ]),
                 SelectFilter::make('company')

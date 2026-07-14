@@ -47,7 +47,7 @@ class UserForm
                 Toggle::make('is_admin')
                     ->label('Platform administrator')
                     ->helperText('Grants access to all companies in this admin panel.')
-                    ->visible(fn (): bool => auth()->user()?->is_admin ?? false),
+                    ->visible(fn (): bool => (bool) auth()->user()->is_admin),
             ]);
     }
 }

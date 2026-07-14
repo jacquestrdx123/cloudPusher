@@ -2,7 +2,9 @@
 
 namespace App\Listeners;
 
+use App\Actions\RecordUserInboxNotification;
 use App\Models\NotificationDelivery;
+use App\Models\User;
 use App\Notifications\WebhookPushNotification;
 use Illuminate\Notifications\Events\NotificationFailed;
 use Illuminate\Notifications\Events\NotificationSent;
@@ -22,6 +24,8 @@ class RecordNotificationDelivery
         'vonage' => 'sms',
     ];
 
+    public function __construct(private RecordUserInboxNotification $recordUserInboxNotification) {}
+
     /**
      * Record a delivery row whenever one of our webhook notifications is
      * sent or fails on a given channel.
@@ -33,15 +37,24 @@ class RecordNotificationDelivery
         }
 
         $failed = $event instanceof NotificationFailed;
+        $channel = self::CHANNEL_LABELS[$event->channel] ?? $event->channel;
 
         NotificationDelivery::create([
             'push_notification_id' => $event->notification->pushNotificationId,
             'user_id' => $event->notifiable->getKey(),
-            'channel' => self::CHANNEL_LABELS[$event->channel] ?? $event->channel,
+            'channel' => $channel,
             'status' => $failed ? NotificationDelivery::STATUS_FAILED : NotificationDelivery::STATUS_SENT,
             'error' => $failed ? $this->errorMessage($event) : null,
             'sent_at' => $failed ? null : now(),
         ]);
+
+        if (! $failed && $event->notifiable instanceof User) {
+            $this->recordUserInboxNotification->handle(
+                $event->notification,
+                $event->notifiable,
+                $channel,
+            );
+        }
     }
 
     private function errorMessage(NotificationFailed $event): string

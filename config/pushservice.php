@@ -46,5 +46,40 @@ return [
 
     'signature_header' => env('PUSH_SIGNATURE_HEADER', 'X-Signature'),
 
-];
+    /*
+    |--------------------------------------------------------------------------
+    | Rate Limiting
+    |--------------------------------------------------------------------------
+    |
+    | Per-minute limits for API and webhook endpoints, scoped by company.
+    |
+    */
 
+    'rate_limit' => (int) env('PUSH_RATE_LIMIT', 120),
+
+    'webhook_rate_limit' => (int) env('PUSH_WEBHOOK_RATE_LIMIT', 60),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Finalization
+    |--------------------------------------------------------------------------
+    |
+    | Seconds to wait after fan-out before aggregating delivery status.
+    |
+    */
+
+    'finalize_delay_seconds' => (int) env('PUSH_FINALIZE_DELAY_SECONDS', 10),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Notification Sound
+    |--------------------------------------------------------------------------
+    |
+    | Default sound played on iOS (APNs) and Android (FCM) when a push arrives.
+    | Use "default" for the system notification sound on each platform.
+    |
+    */
+
+    'notification_sound' => env('PUSH_NOTIFICATION_SOUND', 'default'),
+
+];
