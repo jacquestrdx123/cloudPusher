@@ -1,0 +1,133 @@
+<?php
+
+use App\Jobs\ProcessPushNotification;
+use App\Models\Company;
+use App\Models\PushNotification;
+use App\Models\User;
+use App\Models\UserGroup;
+use Illuminate\Support\Facades\Queue;
+
+/**
+ * @param  array<string, mixed>  $payload
+ */
+function storeNotification(Company $company, array $payload, ?string $token = null): Illuminate\Testing\TestResponse
+{
+    return test()->postJson(
+        route('api.v1.notifications.store', $company),
+        $payload,
+        ['Authorization' => 'Bearer '.($token ?? $company->hmac_secret)],
+    );
+}
+
+it('rejects notifications without a valid company token', function () {
+    $company = Company::factory()->create();
+
+    storeNotification($company, [
+        'target' => ['type' => 'user', 'id' => 1],
+        'title' => 'Hi',
+    ], token: 'wrong-token')->assertUnauthorized();
+});
+
+it('validates the notification payload', function () {
+    $company = Company::factory()->create();
+
+    storeNotification($company, [
+        'target' => ['type' => 'user'],
+        'title' => 'Hi',
+    ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('target');
+
+    storeNotification($company, [
+        'target' => ['type' => 'group', 'slug' => 'ops'],
+    ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('title');
+});
+
+it('queues a notification for a user', function () {
+    Queue::fake();
+
+    $company = Company::factory()->create();
+    $user = User::factory()->for($company)->create();
+
+    storeNotification($company, [
+        'target' => ['type' => 'user', 'id' => $user->id],
+        'title' => 'Server down',
+        'body' => 'Investigate now',
+        'data' => ['severity' => 'critical'],
+        'channels' => ['push', 'mail'],
+    ])
+        ->assertStatus(202)
+        ->assertJsonPath('data.status', PushNotification::STATUS_PENDING)
+        ->assertJsonPath('data.target_type', PushNotification::TARGET_USER)
+        ->assertJsonPath('data.user_id', $user->id)
+        ->assertJsonPath('data.title', 'Server down')
+        ->assertJsonPath('data.body', 'Investigate now')
+        ->assertJsonPath('data.payload.severity', 'critical')
+        ->assertJsonPath('data.channels', ['push', 'mail']);
+
+    Queue::assertPushed(ProcessPushNotification::class);
+});
+
+it('queues a notification for a user group by slug', function () {
+    Queue::fake();
+
+    $company = Company::factory()->create();
+    $group = UserGroup::factory()->for($company)->create(['slug' => 'ops']);
+    $users = User::factory()->for($company)->count(2)->create();
+    $group->users()->attach($users);
+
+    storeNotification($company, [
+        'target' => ['type' => 'group', 'slug' => 'ops'],
+        'title' => 'Ops alert',
+        'body' => 'Check dashboards',
+    ])
+        ->assertStatus(202)
+        ->assertJsonPath('data.target_type', PushNotification::TARGET_GROUP)
+        ->assertJsonPath('data.user_group_id', $group->id);
+
+    Queue::assertPushed(ProcessPushNotification::class);
+});
+
+it('resolves a user target by email', function () {
+    Queue::fake();
+
+    $company = Company::factory()->create();
+    $user = User::factory()->for($company)->create(['email' => 'ops@acme.test']);
+
+    storeNotification($company, [
+        'target' => ['type' => 'user', 'email' => 'ops@acme.test'],
+        'title' => 'Hello',
+    ])->assertStatus(202);
+
+    expect(PushNotification::firstOrFail()->user_id)->toBe($user->id);
+});
+
+it('returns 422 when the target does not belong to the company', function () {
+    Queue::fake();
+
+    $company = Company::factory()->create();
+    $otherUser = User::factory()->create();
+
+    storeNotification($company, [
+        'target' => ['type' => 'user', 'id' => $otherUser->id],
+        'title' => 'Hello',
+    ])->assertStatus(422);
+
+    Queue::assertNothingPushed();
+});
+
+it('falls back to company default channels when none are supplied', function () {
+    Queue::fake();
+
+    $company = Company::factory()->create(['default_channels' => ['mail', 'sms']]);
+    $user = User::factory()->for($company)->create();
+
+    storeNotification($company, [
+        'target' => ['type' => 'user', 'id' => $user->id],
+        'title' => 'Hello',
+    ])->assertStatus(202);
+
+    expect(PushNotification::firstOrFail()->channels)->toBe(['mail', 'sms']);
+});

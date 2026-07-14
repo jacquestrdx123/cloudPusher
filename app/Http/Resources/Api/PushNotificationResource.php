@@ -1,0 +1,33 @@
+<?php
+
+namespace App\Http\Resources\Api;
+
+use App\Models\PushNotification;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+/**
+ * @mixin PushNotification
+ */
+class PushNotificationResource extends JsonResource
+{
+    /**
+     * @return array<string, mixed>
+     */
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'status' => $this->status,
+            'target_type' => $this->target_type,
+            'user_id' => $this->user_id,
+            'user_group_id' => $this->user_group_id,
+            'title' => $this->title,
+            'body' => $this->body,
+            'payload' => $this->data,
+            'channels' => $this->channels,
+            'recipients_count' => $this->recipients_count,
+            'created_at' => $this->created_at,
+        ];
+    }
+}

@@ -1,0 +1,395 @@
+{
+  "info": {
+    "_postman_id": "a7c3e8f1-2b4d-4e9a-9c6f-1d5e8a0b2c4d",
+    "name": "Push Service API",
+    "description": "Company-authenticated API for the Push Service.\n\n**Auth (v1 routes)**\nUse `Authorization: Bearer {{companyToken}}` where `companyToken` is the company HMAC secret from Filament (Company settings).\n\n**Auth (legacy webhook)**\n`POST /api/webhooks/{slug}/push` requires `X-Signature: sha256=<hmac>` of the raw JSON body using the same secret. The included pre-request script computes this automatically.\n\nSet collection variables before sending requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{companyToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://push-service.test"
+    },
+    {
+      "key": "companySlug",
+      "value": "acme"
+    },
+    {
+      "key": "companyToken",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": "1"
+    },
+    {
+      "key": "userEmail",
+      "value": "ops@acme.test"
+    },
+    {
+      "key": "groupSlug",
+      "value": "ops"
+    },
+    {
+      "key": "groupId",
+      "value": "1"
+    },
+    {
+      "key": "deviceTokenId",
+      "value": "1"
+    },
+    {
+      "key": "fcmToken",
+      "value": "example-fcm-device-token"
+    }
+  ],
+  "item": [
+    {
+      "name": "Device Tokens",
+      "description": "Register and remove FCM / APNs device tokens for company users.",
+      "item": [
+        {
+          "name": "Register device token (by email)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    if (body.data && body.data.id) {",
+                  "        pm.collectionVariables.set('deviceTokenId', String(body.data.id));",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": {\n    \"email\": \"{{userEmail}}\"\n  },\n  \"platform\": \"fcm\",\n  \"token\": \"{{fcmToken}}\",\n  \"name\": \"Pixel 8\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/{{companySlug}}/device-tokens",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "{{companySlug}}", "device-tokens"]
+            },
+            "description": "Register or update a device token for a user resolved by email.\n\n- `platform`: `fcm` or `apns`\n- Upserts on `(platform, token)`\n- **201** on create, **200** on update\n\nSaves returned `data.id` into `deviceTokenId`."
+          },
+          "response": [
+            {
+              "name": "Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{companyToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"user\": { \"email\": \"ops@acme.test\" },\n  \"platform\": \"fcm\",\n  \"token\": \"example-fcm-device-token\",\n  \"name\": \"Pixel 8\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/{{companySlug}}/device-tokens",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "{{companySlug}}", "device-tokens"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"data\": {\n    \"id\": 1,\n    \"user_id\": 1,\n    \"platform\": \"fcm\",\n    \"token\": \"example-fcm-device-token\",\n    \"name\": \"Pixel 8\",\n    \"last_used_at\": \"2026-07-14T13:00:00.000000Z\",\n    \"created_at\": \"2026-07-14T13:00:00.000000Z\",\n    \"updated_at\": \"2026-07-14T13:00:00.000000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Register device token (by user id)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": {\n    \"id\": {{userId}}\n  },\n  \"platform\": \"apns\",\n  \"token\": \"example-apns-device-token\",\n  \"name\": \"iPhone 15\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/{{companySlug}}/device-tokens",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "{{companySlug}}", "device-tokens"]
+            },
+            "description": "Same as email registration, but resolves the user by numeric id."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete device token",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/{{companySlug}}/device-tokens/{{deviceTokenId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "{{companySlug}}", "device-tokens", "{{deviceTokenId}}"]
+            },
+            "description": "Remove a device token that belongs to a user in this company.\n\nReturns **204 No Content** on success."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "description": "Queue push / mail / SMS notifications to a user or user group.",
+      "item": [
+        {
+          "name": "Send to user (by email)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target\": {\n    \"type\": \"user\",\n    \"email\": \"{{userEmail}}\"\n  },\n  \"title\": \"Server down\",\n  \"body\": \"Investigate the production alert\",\n  \"data\": {\n    \"severity\": \"critical\",\n    \"url\": \"/incidents/1\"\n  },\n  \"channels\": [\"push\", \"mail\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/{{companySlug}}/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "{{companySlug}}", "notifications"]
+            },
+            "description": "Queue a notification for a single user.\n\n- `channels` optional: `push`, `mail`, `sms` (falls back to company defaults)\n- `data` is an arbitrary JSON object returned to clients as `payload`\n- Returns **202 Accepted**"
+          },
+          "response": [
+            {
+              "name": "Accepted",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{companyToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"target\": { \"type\": \"user\", \"email\": \"ops@acme.test\" },\n  \"title\": \"Server down\",\n  \"body\": \"Investigate the production alert\",\n  \"data\": { \"severity\": \"critical\" },\n  \"channels\": [\"push\", \"mail\"]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/{{companySlug}}/notifications",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "{{companySlug}}", "notifications"]
+                }
+              },
+              "status": "Accepted",
+              "code": 202,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"data\": {\n    \"id\": 1,\n    \"status\": \"pending\",\n    \"target_type\": \"user\",\n    \"user_id\": 1,\n    \"user_group_id\": null,\n    \"title\": \"Server down\",\n    \"body\": \"Investigate the production alert\",\n    \"payload\": {\n      \"severity\": \"critical\"\n    },\n    \"channels\": [\"push\", \"mail\"],\n    \"recipients_count\": 0,\n    \"created_at\": \"2026-07-14T13:00:00.000000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Send to user (by id)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target\": {\n    \"type\": \"user\",\n    \"id\": {{userId}}\n  },\n  \"title\": \"Hello\",\n  \"body\": \"You have a new message\",\n  \"channels\": [\"push\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/{{companySlug}}/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "{{companySlug}}", "notifications"]
+            },
+            "description": "Send to a user by numeric id."
+          },
+          "response": []
+        },
+        {
+          "name": "Send to group (by slug)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target\": {\n    \"type\": \"group\",\n    \"slug\": \"{{groupSlug}}\"\n  },\n  \"title\": \"Ops alert\",\n  \"body\": \"Check dashboards\",\n  \"data\": {\n    \"dashboard\": \"ops\"\n  },\n  \"channels\": [\"push\", \"mail\", \"sms\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/{{companySlug}}/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "{{companySlug}}", "notifications"]
+            },
+            "description": "Fan out to every user in a company group identified by slug."
+          },
+          "response": []
+        },
+        {
+          "name": "Send to group (by id)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target\": {\n    \"type\": \"group\",\n    \"id\": {{groupId}}\n  },\n  \"title\": \"Team update\",\n  \"body\": \"Deployment complete\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/{{companySlug}}/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "{{companySlug}}", "notifications"]
+            },
+            "description": "Fan out to a group by numeric id. Omitting `channels` uses the company default channels."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Webhooks (HMAC)",
+      "description": "Legacy signed webhook endpoint. Prefer the v1 Bearer API for new integrations.\n\nUses the same company secret (`companyToken`) to sign the raw request body.",
+      "auth": {
+        "type": "noauth"
+      },
+      "item": [
+        {
+          "name": "Push notification (signed)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.request.body.raw;",
+                  "const secret = pm.collectionVariables.get('companyToken');",
+                  "const signature = CryptoJS.HmacSHA256(body, secret).toString(CryptoJS.enc.Hex);",
+                  "pm.request.headers.upsert({",
+                  "    key: 'X-Signature',",
+                  "    value: 'sha256=' + signature",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target\": {\n    \"type\": \"user\",\n    \"email\": \"{{userEmail}}\"\n  },\n  \"title\": \"Webhook alert\",\n  \"body\": \"Signed webhook delivery\",\n  \"data\": {\n    \"source\": \"webhook\"\n  },\n  \"channels\": [\"push\", \"mail\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/webhooks/{{companySlug}}/push",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "webhooks", "{{companySlug}}", "push"]
+            },
+            "description": "HMAC-SHA256 signed webhook.\n\nPre-request script sets `X-Signature: sha256=<hex>` from the raw body and `companyToken`.\n\nDo not reformat the body after the script runs — the signature must match the exact payload bytes."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
