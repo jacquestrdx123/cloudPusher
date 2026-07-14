@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Listeners\PruneInvalidDeviceTokens;
 use App\Listeners\RecordNotificationDelivery;
+use App\Models\Company;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -64,14 +65,14 @@ class AppServiceProvider extends ServiceProvider
             $company = $request->route('company');
 
             return Limit::perMinute((int) config('pushservice.rate_limit'))
-                ->by(is_object($company) ? (string) $company->getKey() : ((string) $company ?: $request->ip()));
+                ->by($company instanceof Company ? (string) $company->getKey() : ((string) $company ?: $request->ip()));
         });
 
         RateLimiter::for('push-webhook', function (Request $request) {
             $company = $request->route('company');
 
             return Limit::perMinute((int) config('pushservice.webhook_rate_limit'))
-                ->by(is_object($company) ? (string) $company->getKey() : ((string) $company ?: $request->ip()));
+                ->by($company instanceof Company ? (string) $company->getKey() : ((string) $company ?: $request->ip()));
         });
     }
 

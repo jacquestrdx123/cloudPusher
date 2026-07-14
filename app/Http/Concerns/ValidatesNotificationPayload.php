@@ -53,4 +53,28 @@ trait ValidatesNotificationPayload
             $validator->errors()->add('target', 'A group target requires "id" or "slug".');
         }
     }
+
+    /**
+     * @return array{type: string, id?: int|null, email?: string|null, slug?: string|null}
+     */
+    protected function targetPayload(): array
+    {
+        $target = [
+            'type' => $this->string('target.type')->toString(),
+        ];
+
+        if ($this->filled('target.id')) {
+            $target['id'] = $this->integer('target.id');
+        }
+
+        if ($this->filled('target.email')) {
+            $target['email'] = $this->string('target.email')->toString();
+        }
+
+        if ($this->filled('target.slug')) {
+            $target['slug'] = $this->string('target.slug')->toString();
+        }
+
+        return $target;
+    }
 }

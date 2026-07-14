@@ -6,6 +6,7 @@ use App\Models\PushNotification;
 use App\Models\User;
 use App\Models\UserNotification;
 use App\Notifications\WebhookPushNotification;
+use Illuminate\Support\Carbon;
 
 class RecordUserInboxNotification
 {
@@ -30,7 +31,7 @@ class RecordUserInboxNotification
             $inbox->body = $notification->body;
             $inbox->data = $notification->data;
             $inbox->channel = $channel;
-            $inbox->delivered_at = now();
+            $inbox->delivered_at = Carbon::now();
         }
 
         $inbox->save();

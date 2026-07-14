@@ -5,13 +5,14 @@ use App\Models\Company;
 use App\Models\PushNotification;
 use App\Models\User;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Testing\TestResponse;
 
 /**
  * Build a signed webhook request and dispatch it.
  *
  * @param  array<string, mixed>  $payload
  */
-function signedPush(Company $company, array $payload, ?string $secret = null): Illuminate\Testing\TestResponse
+function signedPush(Company $company, array $payload, ?string $secret = null): TestResponse
 {
     $body = json_encode($payload);
     $signature = hash_hmac('sha256', $body, $secret ?? $company->hmac_secret);

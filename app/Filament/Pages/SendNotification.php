@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Actions\DispatchPushNotification;
+use App\Models\Company;
 use App\Models\PushNotification;
 use App\Models\User;
 use App\Models\UserGroup;
@@ -137,7 +138,7 @@ class SendNotification extends Page
     {
         $company = Filament::getTenant();
 
-        if ($company === null) {
+        if (! $company instanceof Company) {
             Notification::make()
                 ->title('Select a company first')
                 ->danger()

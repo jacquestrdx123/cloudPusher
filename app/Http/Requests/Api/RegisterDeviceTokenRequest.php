@@ -45,4 +45,37 @@ class RegisterDeviceTokenRequest extends FormRequest
             },
         ];
     }
+
+    /**
+     * @return array{
+     *     user: array{id?: int|null, email?: string|null},
+     *     platform: string,
+     *     token: string,
+     *     name?: string|null
+     * }
+     */
+    public function payload(): array
+    {
+        $user = [];
+
+        if ($this->filled('user.id')) {
+            $user['id'] = $this->integer('user.id');
+        }
+
+        if ($this->filled('user.email')) {
+            $user['email'] = $this->string('user.email')->toString();
+        }
+
+        $payload = [
+            'user' => $user,
+            'platform' => $this->string('platform')->toString(),
+            'token' => $this->string('token')->toString(),
+        ];
+
+        if ($this->filled('name')) {
+            $payload['name'] = $this->string('name')->toString();
+        }
+
+        return $payload;
+    }
 }

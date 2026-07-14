@@ -21,7 +21,7 @@ class WebhookController extends Controller
         DispatchPushNotification $dispatchPushNotification,
     ): JsonResponse {
         try {
-            $notification = $dispatchPushNotification->handle($company, $request->validated());
+            $notification = $dispatchPushNotification->handle($company, $request->payload());
         } catch (InvalidArgumentException $exception) {
             return response()->json([
                 'message' => $exception->getMessage(),

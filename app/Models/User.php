@@ -113,6 +113,9 @@ class User extends Authenticatable implements FilamentUser, HasDefaultTenant, Ha
         return $this->is_admin;
     }
 
+    /**
+     * @return Collection<int, Company>
+     */
     public function getTenants(Panel $panel): Collection
     {
         if ($this->is_admin) {

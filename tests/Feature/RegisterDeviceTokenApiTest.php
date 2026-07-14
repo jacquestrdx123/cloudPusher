@@ -3,11 +3,12 @@
 use App\Models\Company;
 use App\Models\DeviceToken;
 use App\Models\User;
+use Illuminate\Testing\TestResponse;
 
 /**
  * @param  array<string, mixed>  $payload
  */
-function registerDeviceToken(Company $company, array $payload, ?string $token = null): Illuminate\Testing\TestResponse
+function registerDeviceToken(Company $company, array $payload, ?string $token = null): TestResponse
 {
     return test()->postJson(
         route('api.v1.device-tokens.store', $company),

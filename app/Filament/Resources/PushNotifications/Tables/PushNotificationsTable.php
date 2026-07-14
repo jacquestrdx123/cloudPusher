@@ -26,8 +26,8 @@ class PushNotificationsTable
                     ->badge()
                     ->formatStateUsing(function (PushNotification $record): string {
                         return match ($record->target_type) {
-                            PushNotification::TARGET_USER => 'User: '.($record->user?->name ?? '—'),
-                            PushNotification::TARGET_GROUP => 'Group: '.($record->group?->name ?? '—'),
+                            PushNotification::TARGET_USER => 'User: '.$record->user->name,
+                            PushNotification::TARGET_GROUP => 'Group: '.$record->group->name,
                             PushNotification::TARGET_BROADCAST => 'Broadcast',
                             default => $record->target_type,
                         };
