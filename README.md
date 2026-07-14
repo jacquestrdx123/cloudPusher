@@ -112,8 +112,12 @@ Key environment variables (see `.env.example`):
 | `PUSH_QUEUE` | Queue name for notification jobs |
 | `PUSH_RATE_LIMIT` | API requests per minute per company |
 | `PUSH_FINALIZE_DELAY_SECONDS` | Wait before aggregating delivery status |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated origins for the Ionic receiver app |
 
-## Architecture
+## Mobile receiver app
+
+The Ionic Vue receiver lives in `vue-app/`. See [vue-app/README.md](vue-app/README.md) for setup, native builds (iOS/Android), and PWA configuration.
+
 
 ```
 Webhook / API → DispatchPushNotification → ProcessPushNotification (job)

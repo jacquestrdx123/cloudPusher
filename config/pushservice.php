@@ -70,4 +70,16 @@ return [
 
     'finalize_delay_seconds' => (int) env('PUSH_FINALIZE_DELAY_SECONDS', 10),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Notification Sound
+    |--------------------------------------------------------------------------
+    |
+    | Default sound played on iOS (APNs) and Android (FCM) when a push arrives.
+    | Use "default" for the system notification sound on each platform.
+    |
+    */
+
+    'notification_sound' => env('PUSH_NOTIFICATION_SOUND', 'default'),
+
 ];

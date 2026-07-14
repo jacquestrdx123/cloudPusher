@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\DeviceTokenController;
+use App\Http\Controllers\Api\V1\InboxController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\WebhookController;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,9 @@ Route::prefix('v1/{company:slug}')
 
         Route::get('notifications/{notification}', [NotificationController::class, 'show'])
             ->name('api.v1.notifications.show');
+
+        Route::get('inbox', [InboxController::class, 'index'])
+            ->name('api.v1.inbox.index');
 
         Route::post('notifications', [NotificationController::class, 'store'])
             ->name('api.v1.notifications.store');

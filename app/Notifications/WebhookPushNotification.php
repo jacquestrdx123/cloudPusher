@@ -70,14 +70,18 @@ class WebhookPushNotification extends Notification implements ShouldQueue
         return (new FcmMessage(notification: new FcmNotification(
             title: $this->title,
             body: $this->body,
-        )))->data($this->stringData());
+        )))->data(array_merge($this->stringData(), [
+            'push_notification_id' => (string) $this->pushNotificationId,
+            'sound' => (string) config('pushservice.notification_sound', 'default'),
+        ]));
     }
 
     public function toApn(object $notifiable): ApnMessage
     {
         $message = ApnMessage::create()
             ->title($this->title)
-            ->body($this->body);
+            ->body($this->body)
+            ->sound(config('pushservice.notification_sound', 'default'));
 
         foreach ($this->data as $key => $value) {
             $message->custom((string) $key, $value);
