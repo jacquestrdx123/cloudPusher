@@ -1,0 +1,7 @@
+{
+  "name": "cloudPusher",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue-vite"
+}
