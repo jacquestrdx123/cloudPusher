@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">cloudPusher</string>
+    <string name="title_activity_main">cloudPusher</string>
+    <string name="package_name">com.cloudpusher.receiver</string>
+    <string name="custom_url_scheme">com.cloudpusher.receiver</string>
+</resources>

@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\DeviceToken;
+use App\Models\UserRegistration;
 use Closure;
 use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Builder;
@@ -25,6 +26,11 @@ class ApplyTenantScopes
                     'user',
                     fn (Builder $query) => $query->where('company_id', $tenant->getKey()),
                 ),
+            );
+
+            UserRegistration::addGlobalScope(
+                'tenant',
+                fn (Builder $query) => $query->where('company_id', $tenant->getKey()),
             );
         }
 

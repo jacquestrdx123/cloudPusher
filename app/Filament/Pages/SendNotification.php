@@ -30,6 +30,8 @@ class SendNotification extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPaperAirplane;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Delivery';
+
     protected static ?string $navigationLabel = 'Send notification';
 
     protected static ?int $navigationSort = 1;

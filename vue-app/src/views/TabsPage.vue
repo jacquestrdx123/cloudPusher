@@ -8,6 +8,10 @@
           <ion-label>Inbox</ion-label>
           <ion-badge v-if="store.unreadCount" color="danger">{{ store.unreadCount }}</ion-badge>
         </ion-tab-button>
+        <ion-tab-button v-if="isCompanyAdmin" tab="approvals" href="/tabs/approvals">
+          <ion-icon :icon="checkmarkCircleOutline" />
+          <ion-label>Approvals</ion-label>
+        </ion-tab-button>
         <ion-tab-button tab="settings" href="/tabs/settings">
           <ion-icon :icon="settingsOutline" />
           <ion-label>Settings</ion-label>
@@ -18,6 +22,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed, onMounted } from 'vue'
 import {
   IonBadge,
   IonIcon,
@@ -28,8 +33,16 @@ import {
   IonTabButton,
   IonTabs,
 } from '@ionic/vue'
-import { mailOutline, settingsOutline } from 'ionicons/icons'
+import { checkmarkCircleOutline, mailOutline, settingsOutline } from 'ionicons/icons'
+import { useSettings } from '@/composables/useSettings'
 import { useNotificationStore } from '@/stores/notifications'
 
 const store = useNotificationStore()
+const { settings, hydrate } = useSettings()
+
+const isCompanyAdmin = computed(() => Boolean(settings.value?.isCompanyAdmin))
+
+onMounted(async () => {
+  await hydrate()
+})
 </script>

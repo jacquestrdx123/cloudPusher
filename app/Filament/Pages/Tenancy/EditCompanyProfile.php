@@ -17,16 +17,20 @@ class EditCompanyProfile extends EditTenantProfile
 
     public function form(Schema $schema): Schema
     {
+        $isGlobalAdmin = auth()->user()?->isGlobalAdmin() === true;
+
         return $schema
             ->components([
                 TextInput::make('name')
                     ->required()
                     ->maxLength(255),
                 TextInput::make('slug')
-                    ->helperText('Used in the webhook URL and admin tenant routes.')
+                    ->helperText('Used in registration URLs, webhook URLs, and tenant routes.')
                     ->required()
                     ->unique(ignoreRecord: true)
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->disabled(fn (): bool => ! $isGlobalAdmin)
+                    ->dehydrated(),
                 Select::make('default_channels')
                     ->label('Default channels')
                     ->helperText('Used when a webhook payload does not specify channels.')
@@ -42,7 +46,10 @@ class EditCompanyProfile extends EditTenantProfile
                     ->readOnly()
                     ->columnSpanFull(),
                 Toggle::make('is_active')
-                    ->label('Active'),
+                    ->label('Active')
+                    ->helperText('Inactive companies cannot accept registrations or API traffic.')
+                    ->disabled(fn (): bool => ! $isGlobalAdmin)
+                    ->dehydrated(),
             ]);
     }
 }

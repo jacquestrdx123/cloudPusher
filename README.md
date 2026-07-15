@@ -32,6 +32,17 @@ php artisan queue:work
 
 Access the admin panel at `/admin`.
 
+### Admin roles
+
+| Role | Seeded login | Access |
+|------|--------------|--------|
+| **Global admin** | `admin@example.com` / `password` | Every company, Companies nav, create tenants |
+| **Company admin** | `company@example.com` / `password` (Acme) | Own company only: users, groups, registrations, notifications |
+
+```bash
+php artisan migrate:fresh --seed
+```
+
 ## API
 
 All API routes are scoped by company slug. Authenticate with:
@@ -78,20 +89,41 @@ GET /api/v1/{company_slug}/notifications?per_page=25
 GET /api/v1/{company_slug}/notifications/{id}
 ```
 
-### User inbox (stored notifications)
-
-Each successfully delivered notification is stored per user with `delivered_at` and `read_at`:
+### Mobile registration + password login
 
 ```http
+POST /api/v1/{company_slug}/auth/register
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "phone": "+27821234567",
+  "password": "secret-pass",
+  "password_confirmation": "secret-pass"
+}
+
+POST /api/v1/auth/login
+{ "phone": "+27821234567", "password": "secret-pass" }
+```
+
+Registration creates a **pending** request (password stored hashed). A company admin must approve it before login works. Login returns a personal `Bearer` token plus `user.company.slug`.
+
+### User inbox (stored notifications)
+
+Each successfully delivered notification is stored per user with `delivered_at` and `read_at`. Prefer a personal user token (no `user[...]` query needed); company HMAC tokens still accept `user[email]` / `user[phone]` / `user[id]`:
+
+```http
+GET /api/v1/{company_slug}/inbox
+Authorization: Bearer {user_api_token}
+
 GET /api/v1/{company_slug}/inbox?user[email]=you@company.com
-PATCH /api/v1/{company_slug}/inbox/{id}/read?user[email]=you@company.com
-PATCH /api/v1/{company_slug}/inbox/read-all?user[email]=you@company.com
+Authorization: Bearer {company_hmac_secret}
 ```
 
 ### Register a device token
 
 ```http
 POST /api/v1/{company_slug}/device-tokens
+Authorization: Bearer {user_api_token}
 
 {
   "platform": "fcm",
@@ -99,6 +131,7 @@ POST /api/v1/{company_slug}/device-tokens
   "name": "Pixel 8"
 }
 ```
+
 
 ### Webhook (HMAC-signed)
 

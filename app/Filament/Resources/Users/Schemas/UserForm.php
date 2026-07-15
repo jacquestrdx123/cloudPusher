@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use App\Support\PhoneNumber;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -20,9 +21,9 @@ class UserForm
                     ->relationship('company', 'name')
                     ->searchable()
                     ->preload()
-                    ->helperText('Leave empty for a platform administrator.')
-                    ->visible(fn (): bool => Filament::getTenant() === null)
-                    ->dehydrated(fn (): bool => Filament::getTenant() === null),
+                    ->helperText('Leave empty for a global administrator.')
+                    ->visible(fn (): bool => auth()->user()?->isGlobalAdmin() === true && Filament::getTenant() === null)
+                    ->dehydrated(fn (): bool => auth()->user()?->isGlobalAdmin() === true && Filament::getTenant() === null),
                 TextInput::make('name')
                     ->required()
                     ->maxLength(255),
@@ -33,7 +34,16 @@ class UserForm
                     ->unique(ignoreRecord: true)
                     ->maxLength(255),
                 TextInput::make('phone')
-                    ->tel(),
+                    ->tel()
+                    ->unique(ignoreRecord: true)
+                    ->helperText('E.164 format (e.g. +27821234567). Used for the mobile app login.')
+                    ->dehydrateStateUsing(function (?string $state): ?string {
+                        if (! filled($state)) {
+                            return null;
+                        }
+
+                        return PhoneNumber::normalize($state) ?: null;
+                    }),
                 TextInput::make('locale')
                     ->maxLength(10)
                     ->placeholder('en'),
@@ -43,11 +53,15 @@ class UserForm
                     ->dehydrateStateUsing(fn (?string $state): ?string => filled($state) ? Hash::make($state) : null)
                     ->dehydrated(fn (?string $state): bool => filled($state))
                     ->required(fn (string $operation): bool => $operation === 'create')
-                    ->helperText('Only needed for users who sign in to a panel.'),
+                    ->helperText('Required for panel login and the mobile app.'),
                 Toggle::make('is_admin')
-                    ->label('Platform administrator')
-                    ->helperText('Grants access to all companies in this admin panel.')
-                    ->visible(fn (): bool => (bool) auth()->user()->is_admin),
+                    ->label('Global administrator')
+                    ->helperText('Full access to every company in this admin panel.')
+                    ->visible(fn (): bool => auth()->user()?->isGlobalAdmin() === true),
+                Toggle::make('is_company_admin')
+                    ->label('Company administrator')
+                    ->helperText('Can manage this company: users, groups, registrations, and notifications.')
+                    ->visible(fn (): bool => auth()->user()?->isGlobalAdmin() === true || auth()->user()?->isCompanyAdmin() === true),
             ]);
     }
 }

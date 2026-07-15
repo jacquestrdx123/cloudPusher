@@ -4,6 +4,7 @@ use App\Filament\Resources\Companies\Pages\ListCompanies;
 use App\Filament\Resources\DeviceTokens\Pages\ListDeviceTokens;
 use App\Filament\Resources\PushNotifications\Pages\ListPushNotifications;
 use App\Filament\Resources\UserGroups\Pages\ListUserGroups;
+use App\Filament\Resources\UserRegistrations\Pages\ListUserRegistrations;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Models\Company;
 use App\Models\PushNotification;
@@ -22,12 +23,23 @@ beforeEach(function () {
     Filament::setTenant($this->company);
 });
 
-it('denies panel access to non-admin users', function () {
-    $panelUser = User::factory()->create(['is_admin' => false]);
+it('denies panel access to users who are not platform or company admins', function () {
+    $panelUser = User::factory()->create([
+        'is_admin' => false,
+        'is_company_admin' => false,
+    ]);
 
     $this->actingAs($panelUser)
         ->get('/admin')
         ->assertForbidden();
+});
+
+it('allows company admins to open the panel', function () {
+    $companyAdmin = User::factory()->for($this->company)->companyAdmin()->create();
+
+    $this->actingAs($companyAdmin)
+        ->get('/admin')
+        ->assertRedirect();
 });
 
 it('redirects admins from the panel root to their default tenant', function () {
@@ -48,4 +60,5 @@ it('renders every resource list page', function (string $page) {
     ListUserGroups::class,
     ListDeviceTokens::class,
     ListPushNotifications::class,
+    ListUserRegistrations::class,
 ]);

@@ -19,7 +19,11 @@ class DeviceTokenResource extends Resource
 {
     protected static ?string $model = DeviceToken::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDevicePhoneMobile;
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Delivery';
+
+    protected static ?int $navigationSort = 3;
 
     /**
      * Device tokens belong to a company through users, so tenant scoping is

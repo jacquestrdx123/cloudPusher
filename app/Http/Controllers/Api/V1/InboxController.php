@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Concerns\ResolvesCompanyApiUser;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\InboxItemResource;
 use App\Models\Company;
-use App\Models\User;
 use App\Models\UserNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,6 +14,8 @@ use Illuminate\Http\Response;
 
 class InboxController extends Controller
 {
+    use ResolvesCompanyApiUser;
+
     /**
      * List stored inbox notifications for a company user.
      */
@@ -78,29 +80,5 @@ class InboxController extends Controller
             ->update(['read_at' => now()]);
 
         return response()->noContent();
-    }
-
-    private function resolveUser(Request $request, Company $company): User
-    {
-        $userRef = $request->validate([
-            'user' => ['required', 'array'],
-            'user.id' => ['nullable', 'integer'],
-            'user.email' => ['nullable', 'email'],
-        ])['user'];
-
-        if (! isset($userRef['id']) && ! isset($userRef['email'])) {
-            abort(422, 'A user reference requires "id" or "email".');
-        }
-
-        $user = $company->users()
-            ->when(isset($userRef['id']), fn ($query) => $query->whereKey($userRef['id']))
-            ->when(isset($userRef['email']), fn ($query) => $query->where('email', $userRef['email']))
-            ->first();
-
-        if ($user === null) {
-            abort(404, 'The requested user does not exist for this company.');
-        }
-
-        return $user;
     }
 }

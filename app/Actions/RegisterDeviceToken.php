@@ -11,7 +11,7 @@ class RegisterDeviceToken
 {
     /**
      * @param  array{
-     *     user: array{id?: int|null, email?: string|null},
+     *     user: array{id?: int|null, email?: string|null, phone?: string|null},
      *     platform: string,
      *     token: string,
      *     name?: string|null
@@ -41,13 +41,14 @@ class RegisterDeviceToken
     }
 
     /**
-     * @param  array{id?: int|null, email?: string|null}  $userRef
+     * @param  array{id?: int|null, email?: string|null, phone?: string|null}  $userRef
      */
     private function resolveUser(Company $company, array $userRef): ?User
     {
         return $company->users()
             ->when(isset($userRef['id']), fn ($query) => $query->whereKey($userRef['id']))
             ->when(isset($userRef['email']), fn ($query) => $query->where('email', $userRef['email']))
+            ->when(isset($userRef['phone']), fn ($query) => $query->where('phone', $userRef['phone']))
             ->first();
     }
 }

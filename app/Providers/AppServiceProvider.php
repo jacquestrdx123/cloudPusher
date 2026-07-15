@@ -74,6 +74,13 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute((int) config('pushservice.webhook_rate_limit'))
                 ->by($company instanceof Company ? (string) $company->getKey() : ((string) $company ?: $request->ip()));
         });
+
+        RateLimiter::for('mobile-login', function (Request $request) {
+            $phone = (string) $request->input('phone', '');
+
+            return Limit::perMinute((int) config('pushservice.auth.otp_rate_limit', 5))
+                ->by($request->ip().'|'.$phone);
+        });
     }
 
     protected function configureNotificationListeners(): void

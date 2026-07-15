@@ -82,4 +82,18 @@ return [
 
     'notification_sound' => env('PUSH_NOTIFICATION_SOUND', 'default'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Mobile Login
+    |--------------------------------------------------------------------------
+    |
+    | End-user authentication for the Ionic receiver app (phone + password).
+    |
+    */
+
+    'auth' => [
+        'otp_rate_limit' => (int) env('PUSH_OTP_RATE_LIMIT', 5),
+        'token_ttl_days' => (int) env('PUSH_USER_TOKEN_TTL_DAYS', 90),
+    ],
+
 ];

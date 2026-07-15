@@ -31,6 +31,7 @@ use Illuminate\Support\Str;
  * @property string|null $phone
  * @property string|null $locale
  * @property bool $is_admin
+ * @property bool $is_company_admin
  * @property Carbon|null $email_verified_at
  * @property string $password
  * @property string|null $remember_token
@@ -38,7 +39,7 @@ use Illuminate\Support\Str;
  * @property Carbon|null $updated_at
  * @property-read Company|null $company
  */
-#[Fillable(['company_id', 'name', 'email', 'phone', 'locale', 'is_admin', 'password'])]
+#[Fillable(['company_id', 'name', 'email', 'phone', 'locale', 'is_admin', 'is_company_admin', 'password'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser, HasDefaultTenant, HasLocalePreference, HasTenants
 {
@@ -56,6 +57,7 @@ class User extends Authenticatable implements FilamentUser, HasDefaultTenant, Ha
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
+            'is_company_admin' => 'boolean',
         ];
     }
 
@@ -100,6 +102,14 @@ class User extends Authenticatable implements FilamentUser, HasDefaultTenant, Ha
     }
 
     /**
+     * @return HasMany<UserApiToken, $this>
+     */
+    public function apiTokens(): HasMany
+    {
+        return $this->hasMany(UserApiToken::class);
+    }
+
+    /**
      * @param  Builder<User>  $query
      * @return Builder<User>
      */
@@ -108,9 +118,39 @@ class User extends Authenticatable implements FilamentUser, HasDefaultTenant, Ha
         return $query->where('is_admin', true);
     }
 
-    public function canAccessPanel(Panel $panel): bool
+    /**
+     * Global (platform) administrator — can manage every company.
+     */
+    public function isGlobalAdmin(): bool
     {
         return $this->is_admin;
+    }
+
+    /**
+     * Company administrator — can manage a single company in the admin panel.
+     */
+    public function isCompanyAdmin(): bool
+    {
+        return $this->is_company_admin && $this->company_id !== null;
+    }
+
+    public function canAdministerCompany(?Company $company): bool
+    {
+        if ($company === null) {
+            return false;
+        }
+
+        if ($this->isGlobalAdmin()) {
+            return true;
+        }
+
+        return $this->isCompanyAdmin()
+            && (int) $this->company_id === (int) $company->getKey();
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->isGlobalAdmin() || $this->isCompanyAdmin();
     }
 
     /**
@@ -118,7 +158,7 @@ class User extends Authenticatable implements FilamentUser, HasDefaultTenant, Ha
      */
     public function getTenants(Panel $panel): Collection
     {
-        if ($this->is_admin) {
+        if ($this->isGlobalAdmin()) {
             return Company::query()->orderBy('name')->get();
         }
 
@@ -133,11 +173,12 @@ class User extends Authenticatable implements FilamentUser, HasDefaultTenant, Ha
             return false;
         }
 
-        if ($this->is_admin) {
-            return true;
-        }
+        return $this->canAdministerCompany($tenant);
+    }
 
-        return (int) $this->company_id === (int) $tenant->getKey();
+    public function canRegisterTenants(Panel $panel): bool
+    {
+        return $this->isGlobalAdmin();
     }
 
     public function getDefaultTenant(Panel $panel): ?Model

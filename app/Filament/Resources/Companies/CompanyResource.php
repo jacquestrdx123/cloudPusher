@@ -18,9 +18,25 @@ class CompanyResource extends Resource
 {
     protected static ?string $model = Company::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingOffice2;
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Platform';
+
+    protected static ?int $navigationSort = 1;
+
+    protected static ?string $navigationLabel = 'Companies';
 
     protected static bool $isScopedToTenant = false;
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->isGlobalAdmin() === true;
+    }
+
+    public static function canEdit($record): bool
+    {
+        return auth()->user()?->isGlobalAdmin() === true;
+    }
 
     public static function form(Schema $schema): Schema
     {

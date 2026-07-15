@@ -20,6 +20,8 @@ class PushNotificationResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBellAlert;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Delivery';
+
     protected static ?int $navigationSort = 2;
 
     protected static ?string $navigationLabel = 'Notification log';

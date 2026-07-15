@@ -1,10 +1,41 @@
 export interface AppSettings {
-  apiBaseUrl: string
   companySlug: string
-  apiToken: string
+  companyName: string
+  accessToken: string
+  userId: number | null
+  userName: string
   userEmail: string
+  userPhone: string
+  isCompanyAdmin: boolean
   soundEnabled: boolean
   deviceName: string
+}
+
+export interface AuthUser {
+  id: number
+  name: string
+  email: string
+  phone: string | null
+  locale: string | null
+  company_id: number | null
+  is_company_admin: boolean
+  company: {
+    id: number
+    name: string
+    slug: string
+  } | null
+}
+
+export interface UserRegistrationItem {
+  id: number
+  name: string
+  email: string
+  phone: string
+  status: 'pending' | 'approved' | 'rejected'
+  review_notes: string | null
+  reviewed_at: string | null
+  created_at: string
+  user_id: number | null
 }
 
 export interface ReceivedNotification {

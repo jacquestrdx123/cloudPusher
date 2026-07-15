@@ -24,20 +24,13 @@ npm install
 npm run dev
 ```
 
-Configure the app in **Settings**:
+**Register** with company slug + name + email + mobile + password. A company admin must approve you (Filament **Registrations**, or the app **Approvals** tab).
 
-| Field | Description |
-|-------|-------------|
-| API base URL | Laravel backend URL (e.g. `http://push-service.test`) |
-| Company slug | Tenant slug from Filament admin |
-| API token | Company `hmac_secret` |
-| Your email | User email registered in that company |
+**Sign in** with mobile number + password. The API host is hardcoded to `https://push-service.test`. In `npm run dev`, API calls are proxied (TLS verify off) so Herd cert warnings are ignored. After login the app stores your company from the authenticated user. Device preferences live under **Settings**.
 
 ## Environment variables
 
 ```env
-VITE_API_BASE_URL=http://localhost:8000
-
 # Required for PWA / web push only
 VITE_FIREBASE_API_KEY=
 VITE_FIREBASE_AUTH_DOMAIN=

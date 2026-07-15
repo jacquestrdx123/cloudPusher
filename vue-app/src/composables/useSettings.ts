@@ -1,5 +1,11 @@
 import { ref, computed } from 'vue'
-import { loadSettings, saveSettings, isConfigured } from '@/services/storage'
+import {
+  clearCachedInbox,
+  clearSettings,
+  loadSettings,
+  saveSettings,
+  isConfigured,
+} from '@/services/storage'
 import type { AppSettings } from '@/types/notification'
 
 const settings = ref<AppSettings | null>(null)
@@ -32,11 +38,20 @@ export function useSettings() {
     return next
   }
 
+  async function reset(): Promise<AppSettings> {
+    await clearSettings()
+    await clearCachedInbox()
+    settings.value = await loadSettings()
+
+    return settings.value
+  }
+
   return {
     settings,
     loading,
     configured,
     hydrate,
     update,
+    reset,
   }
 }

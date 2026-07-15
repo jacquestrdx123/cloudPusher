@@ -32,6 +32,7 @@ class UserFactory extends Factory
             'phone' => fake()->e164PhoneNumber(),
             'locale' => null,
             'is_admin' => false,
+            'is_company_admin' => false,
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
@@ -56,6 +57,15 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'company_id' => null,
             'is_admin' => true,
+            'is_company_admin' => false,
+        ]);
+    }
+
+    public function companyAdmin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_admin' => false,
+            'is_company_admin' => true,
         ]);
     }
 }

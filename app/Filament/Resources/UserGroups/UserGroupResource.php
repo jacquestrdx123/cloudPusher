@@ -21,6 +21,10 @@ class UserGroupResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'People';
+
+    protected static ?int $navigationSort = 3;
+
     public static function form(Schema $schema): Schema
     {
         return UserGroupForm::configure($schema);

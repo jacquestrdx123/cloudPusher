@@ -1,5 +1,12 @@
+/** Production / Capacitor API host (hardcoded for now). */
+export const API_ORIGIN = 'https://push-service.test'
+
 export const config = {
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000',
+  /**
+   * In `npm run dev`, use the Vite proxy (same-origin `/api`) so self-signed
+   * Herd TLS certs are ignored. Everywhere else call the API origin directly.
+   */
+  apiBaseUrl: import.meta.env.DEV ? '' : API_ORIGIN,
   firebase: {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY ?? '',
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? '',

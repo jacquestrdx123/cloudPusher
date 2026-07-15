@@ -8,44 +8,19 @@
 
     <ion-content class="ion-padding">
       <ion-list>
-        <ion-list-header>cloudPusher connection</ion-list-header>
+        <ion-list-header>Account</ion-list-header>
 
         <ion-item>
-          <ion-input
-            v-model="form.apiBaseUrl"
-            label="API base URL"
-            label-placement="stacked"
-            placeholder="https://push.example.com"
-          />
+          <ion-label>
+            <h2>{{ form.userName || 'Signed in' }}</h2>
+            <p>{{ form.userPhone }}</p>
+            <p v-if="form.userEmail">{{ form.userEmail }}</p>
+            <p>{{ form.companyName || form.companySlug }}</p>
+            <p v-if="form.isCompanyAdmin">Company admin</p>
+          </ion-label>
         </ion-item>
 
-        <ion-item>
-          <ion-input
-            v-model="form.companySlug"
-            label="Company slug"
-            label-placement="stacked"
-            placeholder="acme-corp"
-          />
-        </ion-item>
-
-        <ion-item>
-          <ion-input
-            v-model="form.apiToken"
-            label="API token"
-            label-placement="stacked"
-            type="password"
-          />
-        </ion-item>
-
-        <ion-item>
-          <ion-input
-            v-model="form.userEmail"
-            label="Your email"
-            label-placement="stacked"
-            type="email"
-            placeholder="you@company.com"
-          />
-        </ion-item>
+        <ion-list-header>Preferences</ion-list-header>
 
         <ion-item>
           <ion-input
@@ -63,13 +38,16 @@
 
       <div class="actions">
         <ion-button expand="block" @click="save" :disabled="saving">
-          Save & connect
+          Save preferences
         </ion-button>
         <ion-button expand="block" fill="outline" @click="testSound">
           Test sound
         </ion-button>
-        <ion-button expand="block" fill="clear" @click="requestPermission">
+        <ion-button expand="block" fill="outline" @click="requestPermission">
           Request push permission
+        </ion-button>
+        <ion-button expand="block" fill="clear" color="danger" @click="signOut" :disabled="saving">
+          Sign out
         </ion-button>
       </div>
 
@@ -98,6 +76,7 @@ import {
   IonHeader,
   IonInput,
   IonItem,
+  IonLabel,
   IonList,
   IonListHeader,
   IonNote,
@@ -108,19 +87,23 @@ import {
   IonToolbar,
 } from '@ionic/vue'
 import { useSettings } from '@/composables/useSettings'
-import { testConnection } from '@/services/api'
+import { logout as apiLogout } from '@/services/api'
 import { requestNotificationPermission } from '@/services/push'
 import { playNotificationSound, unlockAudio } from '@/services/sound'
 import type { AppSettings } from '@/types/notification'
 
 const router = useRouter()
-const { hydrate, update } = useSettings()
+const { hydrate, update, reset } = useSettings()
 
 const form = reactive<AppSettings>({
-  apiBaseUrl: 'http://localhost:8000',
   companySlug: '',
-  apiToken: '',
+  companyName: '',
+  accessToken: '',
+  userId: null,
+  userName: '',
   userEmail: '',
+  userPhone: '',
+  isCompanyAdmin: false,
   soundEnabled: true,
   deviceName: '',
 })
@@ -139,14 +122,15 @@ async function save(): Promise<void> {
   message.value = null
 
   try {
-    const saved = await update({ ...form })
-    await testConnection(saved)
+    await update({
+      deviceName: form.deviceName,
+      soundEnabled: form.soundEnabled,
+    })
     messageColor.value = 'success'
-    message.value = 'Connected successfully'
-    router.replace('/tabs/inbox')
+    message.value = 'Preferences saved'
   } catch (error) {
     messageColor.value = 'danger'
-    message.value = error instanceof Error ? error.message : 'Connection failed'
+    message.value = error instanceof Error ? error.message : 'Save failed'
   } finally {
     saving.value = false
   }
@@ -163,6 +147,28 @@ async function requestPermission(): Promise<void> {
   const granted = await requestNotificationPermission()
   messageColor.value = granted ? 'success' : 'warning'
   message.value = granted ? 'Permission granted' : 'Permission denied'
+}
+
+async function signOut(): Promise<void> {
+  saving.value = true
+  message.value = null
+
+  try {
+    const current = await hydrate()
+
+    if (current.accessToken) {
+      try {
+        await apiLogout(current)
+      } catch {
+        // Still clear local session if the API revoke fails.
+      }
+    }
+
+    await reset()
+    router.replace('/login')
+  } finally {
+    saving.value = false
+  }
 }
 </script>
 

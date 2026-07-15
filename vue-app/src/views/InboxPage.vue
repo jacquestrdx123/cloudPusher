@@ -27,9 +27,9 @@
 
       <div v-if="!configured" class="empty-state">
         <ion-icon :icon="settingsOutline" />
-        <h2>Connect to cloudPusher</h2>
-        <p>Configure your company API credentials to receive notifications.</p>
-        <ion-button router-link="/tabs/settings">Open settings</ion-button>
+        <h2>Sign in to cloudPusher</h2>
+        <p>Log in with your mobile number to receive notifications.</p>
+        <ion-button router-link="/login">Sign in</ion-button>
       </div>
 
       <div v-else-if="store.loading" class="empty-state">

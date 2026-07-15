@@ -8,11 +8,22 @@ import { defineConfig } from 'vite'
 import { firebaseConfigPlugin } from './vite.firebase-config'
 
 export default defineConfig({
+  server: {
+    proxy: {
+      // Avoid browser TLS errors against Herd's local https://push-service.test cert.
+      '/api': {
+        target: 'https://push-service.test',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
   plugins: [
     vue(),
     legacy(),
     firebaseConfigPlugin(),
     VitePWA({
+
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'sounds/notification.mp3'],
       manifest: {
