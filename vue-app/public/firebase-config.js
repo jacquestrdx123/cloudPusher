@@ -1,9 +1,0 @@
-self.FIREBASE_CONFIG = {
-  "apiKey": "AIzaSyBCAPf1zwpbSpOgA33x-fDEdRsgSGfiZwY",
-  "authDomain": "cloudpusher-d58ad.firebaseapp.com",
-  "projectId": "cloudpusher-d58ad",
-  "storageBucket": "cloudpusher-d58ad.firebasestorage.app",
-  "messagingSenderId": "753924658900",
-  "appId": "1:753924658900:web:5f1efa3c6acefcf193cd41",
-  "measurementId": "G-ER0QXYHGJR"
-}

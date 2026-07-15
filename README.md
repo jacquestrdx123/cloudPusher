@@ -159,7 +159,7 @@ Key environment variables (see `.env.example`):
 
 ## Mobile receiver app
 
-The Ionic Vue receiver lives in `vue-app/`. See [vue-app/README.md](vue-app/README.md) for setup, native builds (iOS/Android), and PWA configuration.
+The Ionic Vue receiver is a separate repo: [`cloudPusherApp`](https://github.com/jacquestrdx123/cloudPusherApp) (local folder `../cloudPusher-app`). Open [`cloudPusher.code-workspace`](../cloudPusher.code-workspace) to work on both projects together.
 
 
 ```
