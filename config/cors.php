@@ -18,6 +18,7 @@ return [
 
     'allowed_origins' => array_filter(array_map(
         'trim',
+        ['https://push-ncloud.on-forge.com','http://push-ncloud.on-forge.com','push-ncloud.on-forge.com'],
         explode(',', (string) env('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,capacitor://localhost,ionic://localhost,http://localhost'))
     )),
 

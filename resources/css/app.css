@@ -4,5 +4,101 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-display: 'Syne', ui-sans-serif, system-ui, sans-serif;
+
+    --color-signal-ink: #06141b;
+    --color-signal-deep: #0a2a32;
+    --color-signal-teal: #1f8a80;
+    --color-signal-mist: #c8ebe6;
+    --color-signal-coral: #e85d4c;
+    --color-signal-coral-hot: #ff6f5c;
+}
+
+@layer utilities {
+    .font-display {
+        font-family: var(--font-display);
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    @keyframes signal-rise {
+        from {
+            opacity: 0;
+            transform: translateY(1.25rem);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes signal-ripple {
+        0% {
+            opacity: 0.55;
+            transform: scale(0.72);
+        }
+        70% {
+            opacity: 0.12;
+        }
+        100% {
+            opacity: 0;
+            transform: scale(1.35);
+        }
+    }
+
+    @keyframes signal-pulse-dot {
+        0%,
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+        50% {
+            transform: scale(1.35);
+            opacity: 0.65;
+        }
+    }
+
+    @keyframes signal-drift {
+        0%,
+        100% {
+            transform: translate3d(0, 0, 0);
+        }
+        50% {
+            transform: translate3d(0, -12px, 0);
+        }
+    }
+
+    .animate-signal-rise {
+        animation: signal-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .animate-signal-rise-delay {
+        animation: signal-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+    }
+
+    .animate-signal-rise-delay-2 {
+        animation: signal-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
+    }
+
+    .animate-signal-ripple {
+        animation: signal-ripple 4.5s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+    }
+
+    .animate-signal-ripple-delay {
+        animation: signal-ripple 4.5s cubic-bezier(0.22, 1, 0.36, 1) 1.5s infinite;
+    }
+
+    .animate-signal-ripple-delay-2 {
+        animation: signal-ripple 4.5s cubic-bezier(0.22, 1, 0.36, 1) 3s infinite;
+    }
+
+    .animate-signal-pulse-dot {
+        animation: signal-pulse-dot 2.4s ease-in-out infinite;
+    }
+
+    .animate-signal-drift {
+        animation: signal-drift 8s ease-in-out infinite;
+    }
 }
