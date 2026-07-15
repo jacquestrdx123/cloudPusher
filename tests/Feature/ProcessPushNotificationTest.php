@@ -63,7 +63,7 @@ it('selects the fcm channel only when the provider is enabled and the user has a
     });
 });
 
-it('sends nothing over push when no provider is enabled', function () {
+it('records a failed delivery when push providers are disabled', function () {
     config()->set('pushservice.providers.fcm', false);
     config()->set('pushservice.providers.apns', false);
     Notification::fake();
@@ -74,9 +74,33 @@ it('sends nothing over push when no provider is enabled', function () {
     $notification = PushNotification::factory()->forUser($user)->create(['channels' => ['push']]);
     (new ProcessPushNotification($notification))->handle();
 
-    // With no enabled push provider the recipient has no deliverable channel,
-    // so Laravel sends nothing to them.
     Notification::assertNotSentTo($user, WebhookPushNotification::class);
+
+    $delivery = NotificationDelivery::where('push_notification_id', $notification->id)->first();
+
+    expect($delivery)->not->toBeNull()
+        ->and($delivery->channel)->toBe('push')
+        ->and($delivery->status)->toBe(NotificationDelivery::STATUS_FAILED)
+        ->and($delivery->error)->toContain('Push providers are disabled');
+});
+
+it('records a failed delivery when the user has no device tokens', function () {
+    config()->set('pushservice.providers.fcm', true);
+    config()->set('pushservice.providers.apns', false);
+    Notification::fake();
+
+    $user = User::factory()->create();
+    $notification = PushNotification::factory()->forUser($user)->create(['channels' => ['push']]);
+
+    (new ProcessPushNotification($notification))->handle();
+
+    Notification::assertNotSentTo($user, WebhookPushNotification::class);
+
+    $delivery = NotificationDelivery::where('push_notification_id', $notification->id)->first();
+
+    expect($delivery)->not->toBeNull()
+        ->and($delivery->status)->toBe(NotificationDelivery::STATUS_FAILED)
+        ->and($delivery->error)->toContain('no FCM device tokens');
 });
 
 it('records a delivery row per channel actually sent', function () {

@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Actions\RecordUndeliverableNotification;
 use App\Models\PushNotification;
 use App\Models\User;
 use App\Notifications\WebhookPushNotification;
@@ -31,6 +32,7 @@ class ProcessPushNotification implements ShouldQueue
      */
     public function handle(): void
     {
+        $recordUndeliverable = app(RecordUndeliverableNotification::class);
         $notification = $this->pushNotification;
         $notification->update(['status' => PushNotification::STATUS_PROCESSING]);
 
@@ -46,16 +48,39 @@ class ProcessPushNotification implements ShouldQueue
             return;
         }
 
-        Notification::send($recipients, new WebhookPushNotification(
+        $outbound = new WebhookPushNotification(
             pushNotificationId: $notification->id,
             title: $notification->title,
             body: $notification->body,
             channels: $notification->channels,
             data: $notification->data ?? [],
-        ));
+        );
 
-        FinalizePushNotificationStatus::dispatch($notification)
-            ->delay(now()->addSeconds((int) config('pushservice.finalize_delay_seconds', 10)));
+        $deliverable = new Collection;
+        $undeliverable = new Collection;
+
+        foreach ($recipients as $user) {
+            if ($outbound->via($user) === []) {
+                $undeliverable->push($user);
+            } else {
+                $deliverable->push($user);
+            }
+        }
+
+        $undeliverable->each(
+            fn (User $user) => $recordUndeliverable->handle($notification, $user, $outbound),
+        );
+
+        if ($deliverable->isNotEmpty()) {
+            Notification::send($deliverable, $outbound);
+
+            FinalizePushNotificationStatus::dispatch($notification)
+                ->delay(now()->addSeconds((int) config('pushservice.finalize_delay_seconds', 10)));
+
+            return;
+        }
+
+        FinalizePushNotificationStatus::dispatch($notification);
     }
 
     /**

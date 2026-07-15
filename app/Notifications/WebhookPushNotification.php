@@ -65,6 +65,78 @@ class WebhookPushNotification extends Notification implements ShouldQueue
         return $via;
     }
 
+    /**
+     * Explain why requested channels could not be routed for this recipient.
+     *
+     * @return array<int, array{channel: string, error: string}>
+     */
+    public function undeliverableAttempts(User $user): array
+    {
+        if ($this->via($user) !== []) {
+            return [];
+        }
+
+        $attempts = [];
+
+        if (in_array('push', $this->channels, true)) {
+            $attempts[] = [
+                'channel' => 'push',
+                'error' => $this->pushUndeliverableReason($user),
+            ];
+        }
+
+        if (in_array('mail', $this->channels, true) && ! $this->providerEnabled('mail')) {
+            $attempts[] = [
+                'channel' => 'mail',
+                'error' => 'Mail provider is disabled (PUSH_MAIL_ENABLED=false).',
+            ];
+        }
+
+        if (in_array('sms', $this->channels, true)) {
+            if (! $this->providerEnabled('sms')) {
+                $attempts[] = [
+                    'channel' => 'sms',
+                    'error' => 'SMS provider is disabled (PUSH_SMS_ENABLED=false).',
+                ];
+            } elseif ($user->phone === null) {
+                $attempts[] = [
+                    'channel' => 'sms',
+                    'error' => 'User has no phone number for SMS delivery.',
+                ];
+            }
+        }
+
+        return $attempts;
+    }
+
+    private function pushUndeliverableReason(User $user): string
+    {
+        $fcmEnabled = $this->providerEnabled('fcm');
+        $apnsEnabled = $this->providerEnabled('apns');
+        $hasFcm = $user->routeNotificationForFcm() !== [];
+        $hasApns = $user->routeNotificationForApn() !== [];
+
+        if (! $fcmEnabled && ! $apnsEnabled) {
+            return 'Push providers are disabled (set PUSH_FCM_ENABLED and/or PUSH_APNS_ENABLED).';
+        }
+
+        $parts = [];
+
+        if ($fcmEnabled && ! $hasFcm) {
+            $parts[] = 'no FCM device tokens';
+        } elseif (! $fcmEnabled) {
+            $parts[] = 'FCM provider disabled';
+        }
+
+        if ($apnsEnabled && ! $hasApns) {
+            $parts[] = 'no APNs device tokens';
+        } elseif (! $apnsEnabled) {
+            $parts[] = 'APNs provider disabled';
+        }
+
+        return 'Push could not be delivered: '.implode('; ', $parts).'.';
+    }
+
     public function toFcm(object $notifiable): FcmMessage
     {
         return (new FcmMessage(notification: new FcmNotification(
