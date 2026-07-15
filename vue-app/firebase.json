@@ -1,4 +1,4 @@
-self.FIREBASE_CONFIG = {
+{
   "apiKey": "AIzaSyBCAPf1zwpbSpOgA33x-fDEdRsgSGfiZwY",
   "authDomain": "cloudpusher-d58ad.firebaseapp.com",
   "projectId": "cloudpusher-d58ad",

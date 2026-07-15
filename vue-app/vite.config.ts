@@ -10,11 +10,11 @@ import { firebaseConfigPlugin } from './vite.firebase-config'
 export default defineConfig({
   server: {
     proxy: {
-      // Avoid browser TLS errors against Herd's local https://push-service.test cert.
+      // Proxy API calls during local Vite dev to avoid CORS.
       '/api': {
-        target: 'https://push-service.test',
+        target: 'https://cloudpusher-backend.on-forge.com',
         changeOrigin: true,
-        secure: false,
+        secure: true,
       },
     },
   },

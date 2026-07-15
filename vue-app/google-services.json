@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "753924658900",
+    "project_id": "cloudpusher-d58ad",
+    "storage_bucket": "cloudpusher-d58ad.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:753924658900:android:875d454aad5aa1a893cd41",
+        "android_client_info": {
+          "package_name": "africa.ncloud.pusher"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyABgH2As3Rngx1b3vGjikFKIvWPYycqtH0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
