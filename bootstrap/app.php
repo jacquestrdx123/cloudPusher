@@ -5,6 +5,7 @@ use App\Http\Middleware\AuthenticateCompanyToken;
 use App\Http\Middleware\AuthenticateUserToken;
 use App\Http\Middleware\VerifyWebhookSignature;
 use App\Models\Company;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -19,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    ->withSchedule(function (Schedule $schedule): void {
+        $schedule->command('horizon:snapshot')->everyFiveMinutes();
+    })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'webhook.signature' => VerifyWebhookSignature::class,

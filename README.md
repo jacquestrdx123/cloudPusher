@@ -24,13 +24,13 @@ php artisan migrate
 php artisan db:seed   # optional
 ```
 
-Run the queue worker (required for delivery):
+Run Horizon (required for delivery — needs Redis with `QUEUE_CONNECTION=redis`):
 
 ```bash
-php artisan queue:work
+php artisan horizon
 ```
 
-Access the admin panel at `/admin`.
+Dashboard: `/horizon` (local open; production requires a global admin). Admin panel: `/admin`.
 
 ### Admin roles
 
