@@ -17,11 +17,13 @@ return [
     'allowed_methods' => ['*'],
 
     'allowed_origins' => array_values(array_unique(array_merge(
+        // Deployed PWA frontend.
+        ['https://push-ncloud.on-forge.com'],
         // Local dev server + native Capacitor webview origins.
         // iOS webview reports `capacitor://localhost`; Android (androidScheme: 'https') reports `https://localhost`.
         ['http://localhost:5173', 'http://localhost', 'https://localhost', 'capacitor://localhost', 'ionic://localhost'],
-        // Deployed PWA origin(s). Set on the server, comma-separated,
-        // e.g. CORS_ALLOWED_ORIGINS=https://your-pwa-domain.on-forge.com
+        // Additional origin(s) via env, comma-separated,
+        // e.g. CORS_ALLOWED_ORIGINS=https://another-domain.example.com
         array_filter(array_map('trim', explode(',', (string) env('CORS_ALLOWED_ORIGINS', ''))))
     ))),
 
