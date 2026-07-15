@@ -13,9 +13,10 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $table->foreignId('company_id')->nullable()->after('id')->constrained()->nullOnDelete();
-            $table->string('phone')->nullable()->after('email');
+            $table->string('phone')->nullable()->unique()->after('email');
             $table->string('locale')->nullable()->after('phone');
             $table->boolean('is_admin')->default(false)->index()->after('locale');
+            $table->boolean('is_company_admin')->default(false)->index()->after('is_admin');
         });
     }
 
@@ -26,7 +27,8 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $table->dropConstrainedForeignId('company_id');
-            $table->dropColumn(['phone', 'locale', 'is_admin']);
+            $table->dropUnique(['phone']);
+            $table->dropColumn(['phone', 'locale', 'is_admin', 'is_company_admin']);
         });
     }
 };

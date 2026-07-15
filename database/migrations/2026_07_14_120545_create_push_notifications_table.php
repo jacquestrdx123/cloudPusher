@@ -23,6 +23,7 @@ return new class extends Migration
             $table->json('channels'); // ['push', 'mail', 'sms']
             $table->string('status')->default('pending')->index(); // pending | processing | sent | failed
             $table->unsignedInteger('recipients_count')->default(0);
+            $table->timestamp('scheduled_at')->nullable();
             $table->timestamps();
         });
     }
