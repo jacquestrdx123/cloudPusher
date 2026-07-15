@@ -57,19 +57,16 @@ class ProcessPushNotification implements ShouldQueue
         );
 
         $deliverable = new Collection;
-        $undeliverable = new Collection;
 
         foreach ($recipients as $user) {
-            if ($outbound->via($user) === []) {
-                $undeliverable->push($user);
-            } else {
+            // Always record skipped push/mail/sms channels, even when another
+            // channel (e.g. mail) still delivers — otherwise push fails silently.
+            $recordUndeliverable->handle($notification, $user, $outbound);
+
+            if ($outbound->via($user) !== []) {
                 $deliverable->push($user);
             }
         }
-
-        $undeliverable->each(
-            fn (User $user) => $recordUndeliverable->handle($notification, $user, $outbound),
-        );
 
         if ($deliverable->isNotEmpty()) {
             Notification::send($deliverable, $outbound);

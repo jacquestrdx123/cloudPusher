@@ -66,18 +66,15 @@ class WebhookPushNotification extends Notification implements ShouldQueue
 
     /**
      * Explain why requested channels could not be routed for this recipient.
+     * Reports per logical channel even when other channels still deliver.
      *
      * @return array<int, array{channel: string, error: string}>
      */
     public function undeliverableAttempts(User $user): array
     {
-        if ($this->via($user) !== []) {
-            return [];
-        }
-
         $attempts = [];
 
-        if (in_array('push', $this->channels, true)) {
+        if (in_array('push', $this->channels, true) && ! $this->canDeliverPush($user)) {
             $attempts[] = [
                 'channel' => 'push',
                 'error' => $this->pushUndeliverableReason($user),
@@ -106,6 +103,14 @@ class WebhookPushNotification extends Notification implements ShouldQueue
         }
 
         return $attempts;
+    }
+
+    private function canDeliverPush(User $user): bool
+    {
+        $fcmOk = $this->providerEnabled('fcm') && $user->routeNotificationForFcm() !== [];
+        $apnsOk = $this->providerEnabled('apns') && $user->routeNotificationForApn() !== [];
+
+        return $fcmOk || $apnsOk;
     }
 
     private function pushUndeliverableReason(User $user): string

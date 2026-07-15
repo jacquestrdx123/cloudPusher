@@ -47,7 +47,7 @@ class SendNotification extends Page
     {
         $this->form->fill([
             'target_type' => PushNotification::TARGET_USER,
-            'channels' => ['push', 'mail'],
+            'channels' => ['push'],
         ]);
     }
 
@@ -91,14 +91,26 @@ class SendNotification extends Page
                 Select::make('user_id')
                     ->label('User')
                     ->options(fn (): array => User::query()
+                        ->withCount('deviceTokens')
                         ->when(
                             ($tenant = Filament::getTenant()) !== null,
                             fn ($query) => $query->where('company_id', $tenant->getKey()),
                         )
                         ->orderBy('name')
-                        ->pluck('name', 'id')
+                        ->get()
+                        ->mapWithKeys(fn (User $user): array => [
+                            $user->id => sprintf(
+                                '%s (%s)%s',
+                                $user->name,
+                                $user->email,
+                                $user->device_tokens_count > 0
+                                    ? " · {$user->device_tokens_count} device token(s)"
+                                    : ' · no device tokens',
+                            ),
+                        ])
                         ->all())
                     ->searchable()
+                    ->helperText('Push only works for users who registered a device token in the PWA or native app.')
                     ->required(fn (callable $get): bool => $get('target_type') === PushNotification::TARGET_USER)
                     ->visible(fn (callable $get): bool => $get('target_type') === PushNotification::TARGET_USER),
                 Select::make('user_group_id')
@@ -127,6 +139,7 @@ class SendNotification extends Page
                         'mail' => 'Email',
                         'sms' => 'SMS',
                     ])
+                    ->helperText('Push requires PUSH_FCM_ENABLED / PUSH_APNS_ENABLED and a matching device token (fcm for web/Android, apns for iOS).')
                     ->required(),
                 DateTimePicker::make('scheduled_at')
                     ->label('Schedule for later')
@@ -183,7 +196,7 @@ class SendNotification extends Page
 
         $this->form->fill([
             'target_type' => PushNotification::TARGET_USER,
-            'channels' => ['push', 'mail'],
+            'channels' => ['push'],
         ]);
     }
 }

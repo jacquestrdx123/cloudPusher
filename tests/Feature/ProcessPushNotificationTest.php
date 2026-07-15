@@ -103,6 +103,34 @@ it('records a failed delivery when the user has no device tokens', function () {
         ->and($delivery->error)->toContain('no FCM device tokens');
 });
 
+it('records a failed push delivery even when mail still succeeds', function () {
+    config()->set('pushservice.providers.fcm', true);
+    config()->set('pushservice.providers.apns', false);
+    config()->set('pushservice.providers.mail', true);
+    Notification::fake();
+
+    $user = User::factory()->create();
+    $notification = PushNotification::factory()->forUser($user)->create([
+        'channels' => ['push', 'mail'],
+    ]);
+
+    (new ProcessPushNotification($notification))->handle();
+
+    Notification::assertSentTo($user, WebhookPushNotification::class, function ($n, $channels) {
+        return in_array('mail', $channels, true)
+            && ! in_array(FcmChannel::class, $channels, true);
+    });
+
+    $pushFailure = NotificationDelivery::query()
+        ->where('push_notification_id', $notification->id)
+        ->where('channel', 'push')
+        ->first();
+
+    expect($pushFailure)->not->toBeNull()
+        ->and($pushFailure->status)->toBe(NotificationDelivery::STATUS_FAILED)
+        ->and($pushFailure->error)->toContain('no FCM device tokens');
+});
+
 it('records a delivery row per channel actually sent', function () {
     // Real send over the array mail transport so delivery events fire.
     $user = User::factory()->create();
