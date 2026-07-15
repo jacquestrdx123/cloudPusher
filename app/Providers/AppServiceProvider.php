@@ -2,17 +2,12 @@
 
 namespace App\Providers;
 
-use App\Listeners\PruneInvalidDeviceTokens;
-use App\Listeners\RecordNotificationDelivery;
 use App\Models\Company;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
-use Illuminate\Notifications\Events\NotificationFailed;
-use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -34,7 +29,6 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureRateLimiting();
-        $this->configureNotificationListeners();
     }
 
     /**
@@ -83,10 +77,8 @@ class AppServiceProvider extends ServiceProvider
         });
     }
 
-    protected function configureNotificationListeners(): void
-    {
-        Event::listen(NotificationSent::class, RecordNotificationDelivery::class);
-        Event::listen(NotificationFailed::class, RecordNotificationDelivery::class);
-        Event::listen(NotificationFailed::class, PruneInvalidDeviceTokens::class);
-    }
+    // Notification delivery/pruning listeners (RecordNotificationDelivery,
+    // PruneInvalidDeviceTokens) are auto-discovered from app/Listeners via their
+    // handle() type-hints. Do NOT also register them explicitly here — that
+    // double-binds them and records each delivery twice.
 }

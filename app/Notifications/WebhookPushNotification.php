@@ -12,7 +12,6 @@ use NotificationChannels\Apn\ApnChannel;
 use NotificationChannels\Apn\ApnMessage;
 use NotificationChannels\Fcm\FcmChannel;
 use NotificationChannels\Fcm\FcmMessage;
-use NotificationChannels\Fcm\Resources\Notification as FcmNotification;
 
 class WebhookPushNotification extends Notification implements ShouldQueue
 {
@@ -139,13 +138,36 @@ class WebhookPushNotification extends Notification implements ShouldQueue
 
     public function toFcm(object $notifiable): FcmMessage
     {
-        return (new FcmMessage(notification: new FcmNotification(
-            title: $this->title,
-            body: $this->body,
-        )))->data(array_merge($this->stringData(), [
+        $sound = (string) config('pushservice.notification_sound', 'default');
+
+        $data = array_merge($this->stringData(), [
+            'title' => $this->title,
+            'body' => (string) $this->body,
             'push_notification_id' => (string) $this->pushNotificationId,
-            'sound' => (string) config('pushservice.notification_sound', 'default'),
-        ]));
+            'sound' => $sound,
+        ]);
+
+        /*
+         * Data-only message. A top-level `notification` block makes web (FCM
+         * webpush) browsers auto-display the notification *and* invokes our
+         * service worker's onBackgroundMessage handler — showing it twice. By
+         * sending data only, the web client renders it once (foreground and
+         * background) from the `data` payload above.
+         *
+         * Native Android still needs a notification block to render in the
+         * system tray while backgrounded, so that is supplied through the
+         * Android-specific config, which the webpush transport ignores.
+         */
+        return (new FcmMessage)
+            ->data($data)
+            ->android([
+                'notification' => [
+                    'title' => $this->title,
+                    'body' => (string) $this->body,
+                    'sound' => $sound,
+                    'default_sound' => true,
+                ],
+            ]);
     }
 
     public function toApn(object $notifiable): ApnMessage
