@@ -80,7 +80,7 @@
         ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force",
-            "@php artisan boost:update --ansi"
+            "@php -r \"if (! is_dir(__DIR__.'/vendor/laravel/boost')) { exit(0); } exec(escapeshellarg(PHP_BINARY).' artisan list --raw 2>/dev/null', $out); if (! array_filter($out, fn ($line) => str_starts_with($line, 'boost:update'))) { exit(0); } passthru(escapeshellarg(PHP_BINARY).' artisan boost:update --ansi', $code); exit($code);\""
         ],
         "post-root-package-install": [
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
