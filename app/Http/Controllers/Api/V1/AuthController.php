@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\DeleteUserAccount;
 use App\Actions\LoginWithPassword;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\DeleteAccountRequest;
 use App\Http\Requests\Api\LoginWithPasswordRequest;
 use App\Http\Resources\Api\AuthUserResource;
 use App\Models\User;
@@ -55,6 +57,24 @@ class AuthController extends Controller
         if ($apiToken instanceof UserApiToken) {
             $apiToken->delete();
         }
+
+        return response()->noContent();
+    }
+
+    /**
+     * Permanently delete the authenticated user's account.
+     */
+    public function destroyAccount(
+        DeleteAccountRequest $request,
+        DeleteUserAccount $deleteUserAccount,
+    ): Response {
+        /** @var User $user */
+        $user = $request->user();
+
+        $deleteUserAccount->handle(
+            $user,
+            $request->string('password')->toString(),
+        );
 
         return response()->noContent();
     }

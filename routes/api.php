@@ -29,6 +29,9 @@ Route::prefix('v1/auth')
 
         Route::post('logout', [AuthController::class, 'logout'])
             ->name('api.v1.auth.logout');
+
+        Route::delete('account', [AuthController::class, 'destroyAccount'])
+            ->name('api.v1.auth.account.destroy');
     });
 
 Route::prefix('v1')
