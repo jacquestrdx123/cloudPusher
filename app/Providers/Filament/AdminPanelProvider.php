@@ -4,6 +4,9 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\Tenancy\EditCompanyProfile;
 use App\Filament\Pages\Tenancy\RegisterCompany;
+use App\Filament\Widgets\ChannelBreakdownChart;
+use App\Filament\Widgets\DeliveriesChart;
+use App\Filament\Widgets\DeliveryStatsOverview;
 use App\Http\Middleware\ApplyTenantScopes;
 use App\Models\Company;
 use Filament\Http\Middleware\Authenticate;
@@ -47,6 +50,9 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
+                DeliveryStatsOverview::class,
+                DeliveriesChart::class,
+                ChannelBreakdownChart::class,
                 AccountWidget::class,
             ])
             ->tenant(Company::class, slugAttribute: 'slug', ownershipRelationship: 'companies')

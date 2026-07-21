@@ -28,4 +28,22 @@ class NotificationDeliveryFactory extends Factory
             'sent_at' => null,
         ];
     }
+
+    public function sent(): static
+    {
+        return $this->state(fn (): array => [
+            'status' => NotificationDelivery::STATUS_SENT,
+            'error' => null,
+            'sent_at' => now(),
+        ]);
+    }
+
+    public function failed(?string $error = 'Delivery failed'): static
+    {
+        return $this->state(fn (): array => [
+            'status' => NotificationDelivery::STATUS_FAILED,
+            'error' => $error,
+            'sent_at' => null,
+        ]);
+    }
 }
