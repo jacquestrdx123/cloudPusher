@@ -58,15 +58,21 @@
                         Multi-channel notifications that reach users over push, email, and SMS.
                     </p>
 
-                    <div class="animate-signal-rise-delay-2 mt-10">
+                    <div class="animate-signal-rise-delay-2 mt-10 flex flex-wrap items-center gap-4">
                         <a
-                            href="/admin"
+                            href="{{ route('contact') }}"
                             class="inline-flex items-center gap-2 bg-signal-coral px-6 py-3 font-display text-sm font-semibold tracking-wide text-white uppercase transition-[background-color,transform] duration-200 hover:bg-signal-coral-hot hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-signal-mist"
                         >
-                            Admin login
+                            Contact us
                             <svg class="size-4" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                                 <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
+                        </a>
+                        <a
+                            href="/admin"
+                            class="inline-flex items-center gap-2 border border-signal-mist/25 px-6 py-3 font-display text-sm font-semibold tracking-wide text-signal-mist uppercase transition-[border-color,color,transform] duration-200 hover:border-signal-mist/50 hover:text-white hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-signal-mist"
+                        >
+                            Admin login
                         </a>
                     </div>
                 </div>

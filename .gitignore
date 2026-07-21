@@ -22,3 +22,7 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+/ssh-mcp
+
+# Cursor MCP — SSH credentials (see .cursor/ssh-mcp.env.example)
+.cursor/ssh-mcp.env

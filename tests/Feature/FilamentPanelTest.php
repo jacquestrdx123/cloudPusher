@@ -2,6 +2,7 @@
 
 use App\Filament\Resources\Companies\Pages\ListCompanies;
 use App\Filament\Resources\DeviceTokens\Pages\ListDeviceTokens;
+use App\Filament\Resources\Leads\Pages\ListLeads;
 use App\Filament\Resources\PushNotifications\Pages\ListPushNotifications;
 use App\Filament\Resources\UserGroups\Pages\ListUserGroups;
 use App\Filament\Resources\UserRegistrations\Pages\ListUserRegistrations;
@@ -60,4 +61,5 @@ it('renders every resource list page', function (string $page) {
     ListDeviceTokens::class,
     ListPushNotifications::class,
     ListUserRegistrations::class,
+    ListLeads::class,
 ]);
