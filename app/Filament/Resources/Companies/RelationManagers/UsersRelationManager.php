@@ -2,38 +2,33 @@
 
 namespace App\Filament\Resources\Companies\RelationManagers;
 
-use Filament\Actions\AssociateAction;
+use Filament\Actions\AttachAction;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\CreateAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\DissociateAction;
-use Filament\Actions\DissociateBulkAction;
+use Filament\Actions\DetachAction;
+use Filament\Actions\DetachBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\TextInput;
+use Filament\Facades\Filament;
+use Filament\Forms\Components\Toggle;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class UsersRelationManager extends RelationManager
 {
     protected static string $relationship = 'users';
 
+    protected static ?string $title = 'Users';
+
     public function form(Schema $schema): Schema
     {
         return $schema
             ->components([
-                TextInput::make('name')
-                    ->required()
-                    ->maxLength(255),
-                TextInput::make('email')
-                    ->label('Email address')
-                    ->email()
-                    ->required()
-                    ->unique('users', 'email', ignoreRecord: true),
-                TextInput::make('phone')
-                    ->tel(),
+                Toggle::make('is_company_admin')
+                    ->label('Company administrator')
+                    ->helperText('Can manage this company in the admin panel.'),
             ]);
     }
 
@@ -48,23 +43,32 @@ class UsersRelationManager extends RelationManager
                     ->searchable(),
                 TextColumn::make('phone')
                     ->toggleable(),
-            ])
-            ->filters([
-                //
+                IconColumn::make('is_company_admin')
+                    ->label('Company admin')
+                    ->boolean(),
             ])
             ->headerActions([
-                CreateAction::make(),
-                AssociateAction::make(),
+                AttachAction::make()
+                    ->preloadRecordSelect()
+                    ->recordSelectSearchColumns(['name', 'email', 'phone'])
+                    ->recordSelectOptionsQuery(fn (Builder $query): Builder => $query->withoutGlobalScope(
+                        Filament::getCurrentOrDefaultPanel()->getTenancyScopeName(),
+                    ))
+                    ->schema(fn (AttachAction $action): array => [
+                        $action->getRecordSelect(),
+                        Toggle::make('is_company_admin')
+                            ->label('Company administrator')
+                            ->helperText('Can manage this company in the admin panel.')
+                            ->default(false),
+                    ]),
             ])
             ->recordActions([
                 EditAction::make(),
-                DissociateAction::make(),
-                DeleteAction::make(),
+                DetachAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DissociateBulkAction::make(),
-                    DeleteBulkAction::make(),
+                    DetachBulkAction::make(),
                 ]),
             ]);
     }
