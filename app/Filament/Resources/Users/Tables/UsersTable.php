@@ -9,7 +9,6 @@ use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 
@@ -25,10 +24,10 @@ class UsersTable
                 TextColumn::make('email')
                     ->label('Email address')
                     ->searchable(),
-                TextColumn::make('company.name')
-                    ->label('Company')
-                    ->searchable()
-                    ->sortable()
+                TextColumn::make('companies.name')
+                    ->label('Companies')
+                    ->badge()
+                    ->separator(',')
                     ->visible(fn (): bool => auth()->user()?->isGlobalAdmin() === true && Filament::getTenant() === null),
                 TextColumn::make('phone')
                     ->searchable()
@@ -41,7 +40,13 @@ class UsersTable
                             return 'Global admin';
                         }
 
-                        if ($record->isCompanyAdmin()) {
+                        $tenant = Filament::getTenant();
+
+                        if ($tenant !== null && $record->isCompanyAdminOf($tenant)) {
+                            return 'Company admin';
+                        }
+
+                        if ($tenant === null && $record->isCompanyAdmin()) {
                             return 'Company admin';
                         }
 
@@ -59,21 +64,38 @@ class UsersTable
                     ->label('Global')
                     ->boolean()
                     ->toggleable(isToggledHiddenByDefault: true),
-                IconColumn::make('is_company_admin')
-                    ->label('Company admin')
-                    ->boolean()
-                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('company')
-                    ->relationship('company', 'name')
-                    ->visible(fn (): bool => auth()->user()?->isGlobalAdmin() === true && Filament::getTenant() === null),
                 TernaryFilter::make('is_company_admin')
-                    ->label('Company admin'),
+                    ->label('Company admin')
+                    ->queries(
+                        true: fn ($query) => $query->whereHas(
+                            'companies',
+                            function ($companies): void {
+                                $tenant = Filament::getTenant();
+                                $companies->wherePivot('is_company_admin', true);
+
+                                if ($tenant !== null) {
+                                    $companies->whereKey($tenant->getKey());
+                                }
+                            },
+                        ),
+                        false: fn ($query) => $query->whereDoesntHave(
+                            'companies',
+                            function ($companies): void {
+                                $tenant = Filament::getTenant();
+                                $companies->wherePivot('is_company_admin', true);
+
+                                if ($tenant !== null) {
+                                    $companies->whereKey($tenant->getKey());
+                                }
+                            },
+                        ),
+                    ),
             ])
             ->recordActions([
                 EditAction::make(),

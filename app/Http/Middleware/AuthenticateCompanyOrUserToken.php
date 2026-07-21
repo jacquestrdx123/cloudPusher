@@ -46,14 +46,14 @@ class AuthenticateCompanyOrUserToken
     {
         $apiToken = UserApiToken::query()
             ->where('token_hash', UserApiToken::hashToken($token))
-            ->with('user')
+            ->with('user.companies')
             ->first();
 
         if ($apiToken === null || $apiToken->isExpired() || $apiToken->user === null) {
             return false;
         }
 
-        if ((int) $apiToken->user->company_id !== (int) $company->id) {
+        if (! $apiToken->user->belongsToCompany($company)) {
             return false;
         }
 

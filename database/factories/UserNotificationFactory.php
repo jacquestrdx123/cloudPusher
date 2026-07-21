@@ -19,7 +19,7 @@ class UserNotificationFactory extends Factory
     public function definition(): array
     {
         $company = Company::factory();
-        $user = User::factory()->for($company);
+        $user = User::factory()->forCompany($company);
 
         return [
             'company_id' => $company,
@@ -36,11 +36,20 @@ class UserNotificationFactory extends Factory
 
     public function forUser(User $user): static
     {
-        return $this->state(fn (array $attributes) => [
-            'company_id' => $user->company_id,
-            'user_id' => $user->id,
-            'push_notification_id' => PushNotification::factory()->forUser($user),
-        ]);
+        return $this->state(function (array $attributes) use ($user) {
+            $company = $user->companies()->first();
+
+            if ($company === null) {
+                $company = Company::factory()->create();
+                $user->companies()->attach($company->id);
+            }
+
+            return [
+                'company_id' => $company->id,
+                'user_id' => $user->id,
+                'push_notification_id' => PushNotification::factory()->forUser($user),
+            ];
+        });
     }
 
     public function read(): static

@@ -68,7 +68,7 @@ it('accepts a signed webhook targeting a user and queues the job', function () {
     Queue::fake();
 
     $company = Company::factory()->create();
-    $user = User::factory()->for($company)->create();
+    $user = User::factory()->forCompany($company)->create();
 
     $response = signedPush($company, [
         'target' => ['type' => 'user', 'id' => $user->id],
@@ -92,7 +92,7 @@ it('resolves a user target by email', function () {
     Queue::fake();
 
     $company = Company::factory()->create();
-    $user = User::factory()->for($company)->create(['email' => 'ops@acme.test']);
+    $user = User::factory()->forCompany($company)->create(['email' => 'ops@acme.test']);
 
     signedPush($company, [
         'target' => ['type' => 'user', 'email' => 'ops@acme.test'],
@@ -120,7 +120,7 @@ it('falls back to the company default channels when none are supplied', function
     Queue::fake();
 
     $company = Company::factory()->create(['default_channels' => ['mail', 'sms']]);
-    $user = User::factory()->for($company)->create();
+    $user = User::factory()->forCompany($company)->create();
 
     signedPush($company, [
         'target' => ['type' => 'user', 'id' => $user->id],

@@ -48,10 +48,9 @@ class VerifyLoginOtp
         }
 
         $user = User::query()
-            ->with('company')
+            ->with(['companies' => fn ($query) => $query->where('is_active', true)])
             ->whereKey($payload['user_id'])
-            ->whereNotNull('company_id')
-            ->whereHas('company', fn ($query) => $query->where('is_active', true))
+            ->whereHas('companies', fn ($query) => $query->where('is_active', true))
             ->first();
 
         if ($user === null || PhoneNumber::normalize((string) $user->phone) !== $normalized) {

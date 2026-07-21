@@ -23,8 +23,8 @@ class ApplyTenantScopes
             DeviceToken::addGlobalScope(
                 'tenant',
                 fn (Builder $query) => $query->whereHas(
-                    'user',
-                    fn (Builder $query) => $query->where('company_id', $tenant->getKey()),
+                    'user.companies',
+                    fn (Builder $query) => $query->whereKey($tenant->getKey()),
                 ),
             );
 

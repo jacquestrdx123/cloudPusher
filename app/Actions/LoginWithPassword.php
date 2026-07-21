@@ -21,10 +21,9 @@ class LoginWithPassword
         $normalized = PhoneNumber::normalize($phone);
 
         $user = User::query()
-            ->with('company')
+            ->with(['companies' => fn ($query) => $query->where('is_active', true)])
             ->where('phone', $normalized)
-            ->whereNotNull('company_id')
-            ->whereHas('company', fn ($query) => $query->where('is_active', true))
+            ->whereHas('companies', fn ($query) => $query->where('is_active', true))
             ->first();
 
         if ($user !== null && Hash::check($password, $user->password)) {

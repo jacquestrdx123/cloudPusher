@@ -16,7 +16,7 @@ beforeEach(function () {
 it('allows only global admins to open the companies list', function () {
     $company = Company::factory()->create();
     $global = User::factory()->admin()->create();
-    $companyAdmin = User::factory()->for($company)->companyAdmin()->create();
+    $companyAdmin = User::factory()->forCompany($company, true)->create();
 
     $this->actingAs($global);
     Filament::setTenant($company);
@@ -37,8 +37,8 @@ it('lets company admins manage users in their company only', function () {
     $acme = Company::factory()->create(['slug' => 'acme']);
     $beta = Company::factory()->create(['slug' => 'beta']);
 
-    $acmeAdmin = User::factory()->for($acme)->companyAdmin()->create();
-    $betaUser = User::factory()->for($beta)->create();
+    $acmeAdmin = User::factory()->forCompany($acme, true)->create();
+    $betaUser = User::factory()->forCompany($beta)->create();
 
     expect($acmeAdmin->can('view', $betaUser))->toBeFalse()
         ->and($acmeAdmin->can('update', $betaUser))->toBeFalse()
@@ -52,7 +52,7 @@ it('lets company admins manage users in their company only', function () {
 
 it('prevents company admins from editing global admins', function () {
     $company = Company::factory()->create();
-    $companyAdmin = User::factory()->for($company)->companyAdmin()->create();
+    $companyAdmin = User::factory()->forCompany($company, true)->create();
     $global = User::factory()->admin()->create();
 
     expect($companyAdmin->can('update', $global))->toBeFalse()
@@ -63,7 +63,7 @@ it('prevents company admins from editing global admins', function () {
 it('scopes company admin tenant access to their company', function () {
     $acme = Company::factory()->create();
     $beta = Company::factory()->create();
-    $companyAdmin = User::factory()->for($acme)->companyAdmin()->create();
+    $companyAdmin = User::factory()->forCompany($acme, true)->create();
 
     expect($companyAdmin->canAccessTenant($acme))->toBeTrue()
         ->and($companyAdmin->canAccessTenant($beta))->toBeFalse()

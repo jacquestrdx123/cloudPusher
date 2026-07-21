@@ -49,7 +49,7 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 AccountWidget::class,
             ])
-            ->tenant(Company::class, slugAttribute: 'slug', ownershipRelationship: 'company')
+            ->tenant(Company::class, slugAttribute: 'slug', ownershipRelationship: 'companies')
             ->tenantRegistration(RegisterCompany::class)
             ->tenantProfile(EditCompanyProfile::class)
             ->searchableTenantMenu()

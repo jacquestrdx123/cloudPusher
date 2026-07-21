@@ -25,7 +25,27 @@ class RegisterDeviceToken
             throw new InvalidArgumentException('The requested user does not exist for this company.');
         }
 
-        $deviceToken = DeviceToken::query()->updateOrCreate(
+        return $this->upsert($user, $payload);
+    }
+
+    /**
+     * @param  array{
+     *     platform: string,
+     *     token: string,
+     *     name?: string|null
+     * }  $payload
+     */
+    public function handleForUser(User $user, array $payload): DeviceToken
+    {
+        return $this->upsert($user, $payload);
+    }
+
+    /**
+     * @param  array{platform: string, token: string, name?: string|null}  $payload
+     */
+    private function upsert(User $user, array $payload): DeviceToken
+    {
+        return DeviceToken::query()->updateOrCreate(
             [
                 'platform' => $payload['platform'],
                 'token' => $payload['token'],
@@ -36,8 +56,6 @@ class RegisterDeviceToken
                 'last_used_at' => now(),
             ],
         );
-
-        return $deviceToken;
     }
 
     /**

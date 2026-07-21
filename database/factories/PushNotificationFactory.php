@@ -25,7 +25,7 @@ class PushNotificationFactory extends Factory
         return [
             'company_id' => $company,
             'target_type' => PushNotification::TARGET_USER,
-            'user_id' => User::factory()->for($company),
+            'user_id' => User::factory()->forCompany($company),
             'user_group_id' => null,
             'title' => fake()->sentence(4),
             'body' => fake()->sentence(),
@@ -38,11 +38,20 @@ class PushNotificationFactory extends Factory
 
     public function forUser(User $user): static
     {
-        return $this->state(fn (array $attributes) => [
-            'company_id' => $user->company_id,
-            'target_type' => PushNotification::TARGET_USER,
-            'user_id' => $user->id,
-        ]);
+        return $this->state(function (array $attributes) use ($user) {
+            $company = $user->companies()->first();
+
+            if ($company === null) {
+                $company = Company::factory()->create();
+                $user->companies()->attach($company->id);
+            }
+
+            return [
+                'company_id' => $company->id,
+                'target_type' => PushNotification::TARGET_USER,
+                'user_id' => $user->id,
+            ];
+        });
     }
 
     public function forGroup(UserGroup $group): static

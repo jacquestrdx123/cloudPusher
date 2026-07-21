@@ -38,13 +38,15 @@ class ApproveUserRegistration
 
         return DB::transaction(function () use ($registration, $reviewer, $notes): User {
             $user = User::query()->create([
-                'company_id' => $registration->company_id,
                 'name' => $registration->name,
                 'email' => $registration->email,
                 'phone' => $registration->phone,
                 'password' => $registration->password,
                 'is_admin' => false,
-                'is_company_admin' => false,
+            ]);
+
+            $user->companies()->syncWithoutDetaching([
+                $registration->company_id => ['is_company_admin' => false],
             ]);
 
             $registration->update([
@@ -55,7 +57,7 @@ class ApproveUserRegistration
                 'user_id' => $user->id,
             ]);
 
-            return $user;
+            return $user->load('companies');
         });
     }
 }

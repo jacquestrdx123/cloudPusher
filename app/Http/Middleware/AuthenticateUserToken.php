@@ -14,7 +14,7 @@ class AuthenticateUserToken
      * Authenticate an end-user via a personal API bearer token.
      *
      * When a `{company}` route parameter is present, the user must belong to that
-     * company. Otherwise the user's own company is used (global auth routes).
+     * company. Otherwise the user must belong to at least one active company.
      *
      * @param  Closure(Request): (Response)  $next
      */
@@ -28,7 +28,7 @@ class AuthenticateUserToken
 
         $apiToken = UserApiToken::query()
             ->where('token_hash', UserApiToken::hashToken($token))
-            ->with(['user.company'])
+            ->with(['user.companies' => fn ($query) => $query->where('is_active', true)])
             ->first();
 
         if ($apiToken === null || $apiToken->isExpired() || $apiToken->user === null) {
@@ -39,10 +39,10 @@ class AuthenticateUserToken
         $routeCompany = $request->route('company');
 
         if ($routeCompany instanceof Company) {
-            if (! $routeCompany->is_active || (int) $user->company_id !== (int) $routeCompany->id) {
+            if (! $routeCompany->is_active || ! $user->belongsToCompany($routeCompany)) {
                 abort(401, 'Unauthenticated.');
             }
-        } elseif ($user->company === null || ! $user->company->is_active) {
+        } elseif ($user->companies->isEmpty()) {
             abort(401, 'Unauthenticated.');
         }
 

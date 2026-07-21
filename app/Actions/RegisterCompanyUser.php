@@ -34,13 +34,13 @@ class RegisterCompanyUser
 
         if (User::query()->where('phone', $phone)->exists()) {
             throw ValidationException::withMessages([
-                'phone' => ['This mobile number is already registered.'],
+                'phone' => ['This mobile number is already registered. Ask a company admin to add you to this company.'],
             ]);
         }
 
         if (User::query()->where('email', $email)->exists()) {
             throw ValidationException::withMessages([
-                'email' => ['This email address is already registered.'],
+                'email' => ['This email address is already registered. Ask a company admin to add you to this company.'],
             ]);
         }
 

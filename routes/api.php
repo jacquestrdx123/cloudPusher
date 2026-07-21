@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\DeviceTokenController;
 use App\Http\Controllers\Api\V1\InboxController;
+use App\Http\Controllers\Api\V1\MemberController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\RegistrationController;
 use App\Http\Controllers\Api\WebhookController;
@@ -30,6 +31,25 @@ Route::prefix('v1/auth')
             ->name('api.v1.auth.logout');
     });
 
+Route::prefix('v1')
+    ->middleware(['user.token', 'throttle:push-api'])
+    ->group(function (): void {
+        Route::get('inbox', [InboxController::class, 'unifiedIndex'])
+            ->name('api.v1.inbox.unified');
+
+        Route::patch('inbox/read-all', [InboxController::class, 'unifiedMarkAllRead'])
+            ->name('api.v1.inbox.unified-mark-all-read');
+
+        Route::patch('inbox/{inbox}/read', [InboxController::class, 'unifiedMarkRead'])
+            ->name('api.v1.inbox.unified-mark-read');
+
+        Route::post('device-tokens', [DeviceTokenController::class, 'storeForUser'])
+            ->name('api.v1.device-tokens.store-for-user');
+
+        Route::delete('device-tokens/{deviceToken}', [DeviceTokenController::class, 'destroyForUser'])
+            ->name('api.v1.device-tokens.destroy-for-user');
+    });
+
 Route::prefix('v1/{company:slug}/registrations')
     ->middleware(['user.token', 'throttle:push-api'])
     ->group(function (): void {
@@ -41,6 +61,16 @@ Route::prefix('v1/{company:slug}/registrations')
 
         Route::post('{registration}/reject', [RegistrationController::class, 'reject'])
             ->name('api.v1.registrations.reject');
+    });
+
+Route::prefix('v1/{company:slug}/members')
+    ->middleware(['user.token', 'throttle:push-api'])
+    ->group(function (): void {
+        Route::post('/', [MemberController::class, 'store'])
+            ->name('api.v1.members.store');
+
+        Route::delete('{user}', [MemberController::class, 'destroy'])
+            ->name('api.v1.members.destroy');
     });
 
 Route::prefix('v1/{company:slug}')

@@ -24,7 +24,7 @@ it('lists notifications for the authenticated company', function () {
 
 it('shows a notification with its deliveries', function () {
     $company = Company::factory()->create();
-    $user = User::factory()->for($company)->create();
+    $user = User::factory()->forCompany($company)->create();
     $notification = PushNotification::factory()->forUser($user)->create([
         'company_id' => $company->id,
     ]);
@@ -59,7 +59,7 @@ it('queues a scheduled notification with scheduled status', function () {
     Queue::fake();
 
     $company = Company::factory()->create();
-    $user = User::factory()->for($company)->create();
+    $user = User::factory()->forCompany($company)->create();
 
     storeNotification($company, [
         'target' => ['type' => 'user', 'id' => $user->id],

@@ -14,7 +14,6 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -25,21 +24,18 @@ use Illuminate\Support\Str;
 
 /**
  * @property int $id
- * @property int|null $company_id
  * @property string $name
  * @property string $email
  * @property string|null $phone
  * @property string|null $locale
  * @property bool $is_admin
- * @property bool $is_company_admin
  * @property Carbon|null $email_verified_at
  * @property string $password
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read Company|null $company
  */
-#[Fillable(['company_id', 'name', 'email', 'phone', 'locale', 'is_admin', 'is_company_admin', 'password'])]
+#[Fillable(['name', 'email', 'phone', 'locale', 'is_admin', 'password'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser, HasDefaultTenant, HasLocalePreference, HasTenants
 {
@@ -57,16 +53,18 @@ class User extends Authenticatable implements FilamentUser, HasDefaultTenant, Ha
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
-            'is_company_admin' => 'boolean',
         ];
     }
 
     /**
-     * @return BelongsTo<Company, $this>
+     * @return BelongsToMany<Company, $this, CompanyUser>
      */
-    public function company(): BelongsTo
+    public function companies(): BelongsToMany
     {
-        return $this->belongsTo(Company::class);
+        return $this->belongsToMany(Company::class)
+            ->using(CompanyUser::class)
+            ->withPivot('is_company_admin')
+            ->withTimestamps();
     }
 
     /**
@@ -119,6 +117,53 @@ class User extends Authenticatable implements FilamentUser, HasDefaultTenant, Ha
     }
 
     /**
+     * @param  Builder<User>  $query
+     * @return Builder<User>
+     */
+    public function scopeMembersOf(Builder $query, Company $company): Builder
+    {
+        return $query->whereHas(
+            'companies',
+            fn (Builder $companies) => $companies->whereKey($company->getKey()),
+        );
+    }
+
+    public function belongsToCompany(?Company $company): bool
+    {
+        if ($company === null) {
+            return false;
+        }
+
+        if ($this->relationLoaded('companies')) {
+            return $this->companies->contains(
+                fn (Company $memberCompany): bool => (int) $memberCompany->getKey() === (int) $company->getKey(),
+            );
+        }
+
+        return $this->companies()->whereKey($company->getKey())->exists();
+    }
+
+    public function isCompanyAdminOf(?Company $company): bool
+    {
+        if ($company === null) {
+            return false;
+        }
+
+        if ($this->relationLoaded('companies')) {
+            $membership = $this->companies->first(
+                fn (Company $memberCompany): bool => (int) $memberCompany->getKey() === (int) $company->getKey(),
+            );
+
+            return $membership !== null && (bool) $membership->pivot->is_company_admin;
+        }
+
+        return $this->companies()
+            ->whereKey($company->getKey())
+            ->wherePivot('is_company_admin', true)
+            ->exists();
+    }
+
+    /**
      * Global (platform) administrator — can manage every company.
      */
     public function isGlobalAdmin(): bool
@@ -127,11 +172,17 @@ class User extends Authenticatable implements FilamentUser, HasDefaultTenant, Ha
     }
 
     /**
-     * Company administrator — can manage a single company in the admin panel.
+     * Company administrator of at least one company.
      */
     public function isCompanyAdmin(): bool
     {
-        return $this->is_company_admin && $this->company_id !== null;
+        if ($this->relationLoaded('companies')) {
+            return $this->companies->contains(
+                fn (Company $company): bool => (bool) $company->pivot->is_company_admin,
+            );
+        }
+
+        return $this->companies()->wherePivot('is_company_admin', true)->exists();
     }
 
     public function canAdministerCompany(?Company $company): bool
@@ -144,8 +195,7 @@ class User extends Authenticatable implements FilamentUser, HasDefaultTenant, Ha
             return true;
         }
 
-        return $this->isCompanyAdmin()
-            && (int) $this->company_id === (int) $company->getKey();
+        return $this->isCompanyAdminOf($company);
     }
 
     public function canAccessPanel(Panel $panel): bool
@@ -162,8 +212,9 @@ class User extends Authenticatable implements FilamentUser, HasDefaultTenant, Ha
             return Company::query()->orderBy('name')->get();
         }
 
-        return Company::query()
-            ->whereKey($this->company_id)
+        return $this->companies()
+            ->wherePivot('is_company_admin', true)
+            ->orderBy('name')
             ->get();
     }
 
@@ -183,7 +234,7 @@ class User extends Authenticatable implements FilamentUser, HasDefaultTenant, Ha
 
     public function getDefaultTenant(Panel $panel): ?Model
     {
-        return $this->company ?? $this->getTenants($panel)->first();
+        return $this->getTenants($panel)->first();
     }
 
     public function preferredLocale(): ?string

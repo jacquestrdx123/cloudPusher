@@ -10,7 +10,7 @@ use Livewire\Livewire;
 
 it('allows company admins to access the admin panel for their company', function () {
     $company = Company::factory()->create();
-    $admin = User::factory()->for($company)->companyAdmin()->create();
+    $admin = User::factory()->forCompany($company, true)->create();
 
     $this->actingAs($admin)
         ->get('/admin')
@@ -21,7 +21,7 @@ it('allows company admins to access the admin panel for their company', function
 
 it('allows company admins to approve registrations from the filament table', function () {
     $company = Company::factory()->create();
-    $admin = User::factory()->for($company)->companyAdmin()->create();
+    $admin = User::factory()->forCompany($company, true)->create();
     $registration = UserRegistration::factory()->for($company)->create([
         'phone' => '+27829998877',
         'email' => 'pending@example.com',

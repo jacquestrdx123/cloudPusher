@@ -94,7 +94,7 @@ class SendNotification extends Page
                         ->withCount('deviceTokens')
                         ->when(
                             ($tenant = Filament::getTenant()) !== null,
-                            fn ($query) => $query->where('company_id', $tenant->getKey()),
+                            fn ($query) => $query->membersOf($tenant),
                         )
                         ->orderBy('name')
                         ->get()

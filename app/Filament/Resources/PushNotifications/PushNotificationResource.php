@@ -18,6 +18,8 @@ class PushNotificationResource extends Resource
 {
     protected static ?string $model = PushNotification::class;
 
+    protected static ?string $tenantOwnershipRelationshipName = 'company';
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBellAlert;
 
     protected static string|\UnitEnum|null $navigationGroup = 'Delivery';

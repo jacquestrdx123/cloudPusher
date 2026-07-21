@@ -19,7 +19,7 @@ function registerDeviceToken(Company $company, array $payload, ?string $token = 
 
 it('rejects requests without a valid company token', function () {
     $company = Company::factory()->create();
-    $user = User::factory()->for($company)->create();
+    $user = User::factory()->forCompany($company)->create();
 
     registerDeviceToken($company, [
         'user' => ['id' => $user->id],
@@ -30,7 +30,7 @@ it('rejects requests without a valid company token', function () {
 
 it('returns 404 for an inactive company', function () {
     $company = Company::factory()->inactive()->create();
-    $user = User::factory()->for($company)->create();
+    $user = User::factory()->forCompany($company)->create();
 
     registerDeviceToken($company, [
         'user' => ['id' => $user->id],
@@ -53,7 +53,7 @@ it('validates the device token payload', function () {
 
 it('registers a device token for a company user', function () {
     $company = Company::factory()->create();
-    $user = User::factory()->for($company)->create();
+    $user = User::factory()->forCompany($company)->create();
 
     $response = registerDeviceToken($company, [
         'user' => ['email' => $user->email],
@@ -74,8 +74,8 @@ it('registers a device token for a company user', function () {
 
 it('updates an existing token when the same platform and token are re-registered', function () {
     $company = Company::factory()->create();
-    $firstUser = User::factory()->for($company)->create();
-    $secondUser = User::factory()->for($company)->create();
+    $firstUser = User::factory()->forCompany($company)->create();
+    $secondUser = User::factory()->forCompany($company)->create();
 
     DeviceToken::factory()->fcm()->for($firstUser)->create([
         'token' => 'shared-token',
@@ -111,7 +111,7 @@ it('rejects registering a token for a user from another company', function () {
 
 it('deletes a device token that belongs to the company', function () {
     $company = Company::factory()->create();
-    $user = User::factory()->for($company)->create();
+    $user = User::factory()->forCompany($company)->create();
     $deviceToken = DeviceToken::factory()->for($user)->create();
 
     test()->deleteJson(

@@ -19,6 +19,8 @@ class UserGroupResource extends Resource
 {
     protected static ?string $model = UserGroup::class;
 
+    protected static ?string $tenantOwnershipRelationshipName = 'company';
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;
 
     protected static string|\UnitEnum|null $navigationGroup = 'People';

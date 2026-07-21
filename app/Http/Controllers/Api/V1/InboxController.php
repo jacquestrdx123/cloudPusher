@@ -6,6 +6,7 @@ use App\Http\Concerns\ResolvesCompanyApiUser;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\InboxItemResource;
 use App\Models\Company;
+use App\Models\User;
 use App\Models\UserNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,78 @@ class InboxController extends Controller
     use ResolvesCompanyApiUser;
 
     /**
+     * List inbox notifications across all companies for the authenticated user.
+     */
+    public function unifiedIndex(Request $request): AnonymousResourceCollection
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $companySlug = $request->string('company')->toString();
+
+        $notifications = UserNotification::query()
+            ->with('company')
+            ->where('user_id', $user->id)
+            ->when(
+                $companySlug !== '',
+                fn ($query) => $query->whereHas(
+                    'company',
+                    fn ($companies) => $companies->where('slug', $companySlug),
+                ),
+            )
+            ->when($request->boolean('unread'), fn ($query) => $query->whereNull('read_at'))
+            ->latest('delivered_at')
+            ->latest('id')
+            ->paginate(min((int) $request->integer('per_page', 25), 100));
+
+        return InboxItemResource::collection($notifications);
+    }
+
+    /**
+     * Mark a single inbox notification as read (any membership company).
+     */
+    public function unifiedMarkRead(Request $request, UserNotification $inbox): InboxItemResource|JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if ((int) $inbox->user_id !== (int) $user->id) {
+            return response()->json(['message' => 'Notification not found.'], 404);
+        }
+
+        if ($inbox->read_at === null) {
+            $inbox->update(['read_at' => now()]);
+        }
+
+        return new InboxItemResource($inbox->fresh()->load('company'));
+    }
+
+    /**
+     * Mark inbox notifications as read across all (or one filtered) companies.
+     */
+    public function unifiedMarkAllRead(Request $request): Response
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $companySlug = $request->string('company')->toString();
+
+        UserNotification::query()
+            ->where('user_id', $user->id)
+            ->whereNull('read_at')
+            ->when(
+                $companySlug !== '',
+                fn ($query) => $query->whereHas(
+                    'company',
+                    fn ($companies) => $companies->where('slug', $companySlug),
+                ),
+            )
+            ->update(['read_at' => now()]);
+
+        return response()->noContent();
+    }
+
+    /**
      * List stored inbox notifications for a company user.
      */
     public function index(Request $request, Company $company): AnonymousResourceCollection
@@ -24,6 +97,7 @@ class InboxController extends Controller
         $user = $this->resolveUser($request, $company);
 
         $notifications = UserNotification::query()
+            ->with('company')
             ->where('company_id', $company->id)
             ->where('user_id', $user->id)
             ->when($request->boolean('unread'), fn ($query) => $query->whereNull('read_at'))
@@ -45,7 +119,7 @@ class InboxController extends Controller
             return response()->json(['message' => 'Notification not found.'], 404);
         }
 
-        return new InboxItemResource($inbox);
+        return new InboxItemResource($inbox->loadMissing('company'));
     }
 
     /**
@@ -63,7 +137,7 @@ class InboxController extends Controller
             $inbox->update(['read_at' => now()]);
         }
 
-        return new InboxItemResource($inbox->fresh());
+        return new InboxItemResource($inbox->fresh()->load('company'));
     }
 
     /**

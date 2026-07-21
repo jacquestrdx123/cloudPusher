@@ -22,26 +22,33 @@ trait ProtectsAdminRoleFields
 
         if (! $actor->isGlobalAdmin()) {
             unset($data['is_admin']);
-
-            if (! $actor->isCompanyAdmin()) {
-                unset($data['is_company_admin']);
-            }
-
-            $tenant = Filament::getTenant();
-
-            if ($tenant !== null) {
-                $data['company_id'] = $tenant->getKey();
-            } else {
-                $data['company_id'] = $actor->company_id;
-            }
-
             $data['is_admin'] = false;
         }
 
         if ($existing?->isGlobalAdmin() && ! $actor->isGlobalAdmin()) {
-            unset($data['is_admin'], $data['is_company_admin'], $data['company_id']);
+            unset($data['is_admin']);
         }
 
         return $data;
+    }
+
+    protected function syncTenantMembership(User $user, bool $isCompanyAdmin): void
+    {
+        $tenant = Filament::getTenant();
+
+        if ($tenant === null) {
+            return;
+        }
+
+        /** @var User|null $actor */
+        $actor = auth()->user();
+
+        if ($actor === null || (! $actor->isGlobalAdmin() && ! $actor->isCompanyAdminOf($tenant))) {
+            $isCompanyAdmin = false;
+        }
+
+        $user->companies()->syncWithoutDetaching([
+            $tenant->getKey() => ['is_company_admin' => $isCompanyAdmin],
+        ]);
     }
 }

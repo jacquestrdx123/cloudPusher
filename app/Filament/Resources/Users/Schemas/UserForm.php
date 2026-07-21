@@ -3,8 +3,6 @@
 namespace App\Filament\Resources\Users\Schemas;
 
 use App\Support\PhoneNumber;
-use Filament\Facades\Filament;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
@@ -16,14 +14,6 @@ class UserForm
     {
         return $schema
             ->components([
-                Select::make('company_id')
-                    ->label('Company')
-                    ->relationship('company', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->helperText('Leave empty for a global administrator.')
-                    ->visible(fn (): bool => auth()->user()?->isGlobalAdmin() === true && Filament::getTenant() === null)
-                    ->dehydrated(fn (): bool => auth()->user()?->isGlobalAdmin() === true && Filament::getTenant() === null),
                 TextInput::make('name')
                     ->required()
                     ->maxLength(255),
@@ -61,6 +51,7 @@ class UserForm
                 Toggle::make('is_company_admin')
                     ->label('Company administrator')
                     ->helperText('Can manage this company: users, groups, registrations, and notifications.')
+                    ->dehydrated(false)
                     ->visible(fn (): bool => auth()->user()?->isGlobalAdmin() === true || auth()->user()?->isCompanyAdmin() === true),
             ]);
     }

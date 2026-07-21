@@ -27,6 +27,12 @@ class InboxItemResource extends JsonResource
             'read' => $this->isRead(),
             'created_at' => $this->created_at,
             'push_notification_id' => $this->push_notification_id,
+            'company_id' => $this->company_id,
+            'company' => $this->whenLoaded('company', fn () => $this->company === null ? null : [
+                'id' => $this->company->id,
+                'name' => $this->company->name,
+                'slug' => $this->company->slug,
+            ]),
         ];
     }
 }

@@ -8,12 +8,50 @@ use App\Http\Requests\Api\RegisterDeviceTokenRequest;
 use App\Http\Resources\Api\DeviceTokenResource;
 use App\Models\Company;
 use App\Models\DeviceToken;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use InvalidArgumentException;
 
 class DeviceTokenController extends Controller
 {
+    /**
+     * Register or update a device token for the authenticated user (any membership).
+     */
+    public function storeForUser(
+        RegisterDeviceTokenRequest $request,
+        RegisterDeviceToken $registerDeviceToken,
+    ): JsonResponse {
+        /** @var User $user */
+        $user = $request->user();
+
+        $deviceToken = $registerDeviceToken->handleForUser($user, $request->payload());
+
+        return (new DeviceTokenResource($deviceToken))
+            ->response()
+            ->setStatusCode($deviceToken->wasRecentlyCreated ? 201 : 200);
+    }
+
+    /**
+     * Remove a device token owned by the authenticated user.
+     */
+    public function destroyForUser(Request $request, DeviceToken $deviceToken): Response|JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if ((int) $deviceToken->user_id !== (int) $user->id) {
+            return response()->json([
+                'message' => 'The device token does not belong to this user.',
+            ], 404);
+        }
+
+        $deviceToken->delete();
+
+        return response()->noContent();
+    }
+
     /**
      * Register or update a device token for a company user.
      */

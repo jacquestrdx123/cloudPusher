@@ -37,7 +37,7 @@ it('queues a notification for a user', function () {
     Queue::fake();
 
     $company = Company::factory()->create();
-    $user = User::factory()->for($company)->create();
+    $user = User::factory()->forCompany($company)->create();
 
     storeNotification($company, [
         'target' => ['type' => 'user', 'id' => $user->id],
@@ -63,7 +63,7 @@ it('queues a notification for a user group by slug', function () {
 
     $company = Company::factory()->create();
     $group = UserGroup::factory()->for($company)->create(['slug' => 'ops']);
-    $users = User::factory()->for($company)->count(2)->create();
+    $users = User::factory()->forCompany($company)->count(2)->create();
     $group->users()->attach($users);
 
     storeNotification($company, [
@@ -82,7 +82,7 @@ it('resolves a user target by email', function () {
     Queue::fake();
 
     $company = Company::factory()->create();
-    $user = User::factory()->for($company)->create(['email' => 'ops@acme.test']);
+    $user = User::factory()->forCompany($company)->create(['email' => 'ops@acme.test']);
 
     storeNotification($company, [
         'target' => ['type' => 'user', 'email' => 'ops@acme.test'],
@@ -110,7 +110,7 @@ it('falls back to company default channels when none are supplied', function () 
     Queue::fake();
 
     $company = Company::factory()->create(['default_channels' => ['mail', 'sms']]);
-    $user = User::factory()->for($company)->create();
+    $user = User::factory()->forCompany($company)->create();
 
     storeNotification($company, [
         'target' => ['type' => 'user', 'id' => $user->id],

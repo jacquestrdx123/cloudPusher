@@ -21,8 +21,7 @@ class RequestLoginOtp
 
         $user = User::query()
             ->where('phone', $normalized)
-            ->whereNotNull('company_id')
-            ->whereHas('company', fn ($query) => $query->where('is_active', true))
+            ->whereHas('companies', fn ($query) => $query->where('is_active', true))
             ->first();
 
         if ($user === null) {

@@ -8,7 +8,7 @@ use App\Models\UserNotification;
 
 it('lists stored inbox notifications for a user by email', function () {
     $company = Company::factory()->create();
-    $user = User::factory()->for($company)->create(['email' => 'mobile@acme.test']);
+    $user = User::factory()->forCompany($company)->create(['email' => 'mobile@acme.test']);
 
     UserNotification::factory()->forUser($user)->create([
         'title' => 'Alert',
@@ -30,7 +30,7 @@ it('lists stored inbox notifications for a user by email', function () {
 
 it('marks a single inbox notification as read', function () {
     $company = Company::factory()->create();
-    $user = User::factory()->for($company)->create(['email' => 'mobile@acme.test']);
+    $user = User::factory()->forCompany($company)->create(['email' => 'mobile@acme.test']);
     $inbox = UserNotification::factory()->forUser($user)->unread()->create();
 
     test()->patchJson(
@@ -47,7 +47,7 @@ it('marks a single inbox notification as read', function () {
 
 it('marks all inbox notifications as read for a user', function () {
     $company = Company::factory()->create();
-    $user = User::factory()->for($company)->create(['email' => 'mobile@acme.test']);
+    $user = User::factory()->forCompany($company)->create(['email' => 'mobile@acme.test']);
 
     UserNotification::factory()->forUser($user)->unread()->count(2)->create();
 

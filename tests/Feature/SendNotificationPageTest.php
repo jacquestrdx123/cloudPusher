@@ -14,8 +14,8 @@ it('queues a push-only notification for the selected tenant user', function () {
     Queue::fake();
 
     $company = Company::factory()->create();
-    $admin = User::factory()->for($company)->companyAdmin()->create();
-    $recipient = User::factory()->for($company)->create();
+    $admin = User::factory()->forCompany($company, true)->create();
+    $recipient = User::factory()->forCompany($company)->create();
     DeviceToken::factory()->fcm()->for($recipient)->create();
 
     $this->actingAs($admin);
@@ -51,7 +51,7 @@ it('queues a push-only notification for the selected tenant user', function () {
 
 it('defaults the send form to the push channel only', function () {
     $company = Company::factory()->create();
-    $admin = User::factory()->for($company)->companyAdmin()->create();
+    $admin = User::factory()->forCompany($company, true)->create();
 
     $this->actingAs($admin);
 

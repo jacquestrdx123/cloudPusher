@@ -15,6 +15,8 @@ class UserRegistrationResource extends Resource
 {
     protected static ?string $model = UserRegistration::class;
 
+    protected static ?string $tenantOwnershipRelationshipName = 'company';
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentCheck;
 
     protected static ?string $navigationLabel = 'Registrations';

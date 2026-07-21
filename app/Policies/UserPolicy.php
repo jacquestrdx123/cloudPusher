@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\User;
+use Filament\Facades\Filament;
 
 class UserPolicy
 {
@@ -58,6 +59,18 @@ class UserPolicy
             return false;
         }
 
-        return (int) $actor->company_id === (int) $model->company_id;
+        $tenant = Filament::getTenant();
+
+        if ($tenant !== null) {
+            return $actor->isCompanyAdminOf($tenant) && $model->belongsToCompany($tenant);
+        }
+
+        return $actor->companies()
+            ->wherePivot('is_company_admin', true)
+            ->whereIn(
+                'companies.id',
+                $model->companies()->select('companies.id'),
+            )
+            ->exists();
     }
 }

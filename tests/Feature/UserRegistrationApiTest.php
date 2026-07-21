@@ -69,7 +69,7 @@ it('tells the user when their registration was rejected', function () {
 
 it('allows a company admin to approve a registration so the user can log in with their password', function () {
     $company = Company::factory()->create();
-    $admin = User::factory()->for($company)->companyAdmin()->create(['phone' => '+27821111111']);
+    $admin = User::factory()->forCompany($company, true)->create(['phone' => '+27821111111']);
     $issued = UserApiToken::issue($admin, 'test');
 
     test()->postJson(route('api.v1.auth.register', $company), [
@@ -101,7 +101,7 @@ it('allows a company admin to approve a registration so the user can log in with
 
 it('forbids regular users from approving registrations', function () {
     $company = Company::factory()->create();
-    $user = User::factory()->for($company)->create();
+    $user = User::factory()->forCompany($company)->create();
     $issued = UserApiToken::issue($user, 'test');
     $registration = UserRegistration::factory()->for($company)->create();
 
@@ -112,7 +112,7 @@ it('forbids regular users from approving registrations', function () {
 
 it('allows a company admin to reject a registration', function () {
     $company = Company::factory()->create();
-    $admin = User::factory()->for($company)->companyAdmin()->create();
+    $admin = User::factory()->forCompany($company, true)->create();
     $issued = UserApiToken::issue($admin, 'test');
     $registration = UserRegistration::factory()->for($company)->create();
 
@@ -130,7 +130,7 @@ it('allows a company admin to reject a registration', function () {
 
 it('lists registrations for a company admin', function () {
     $company = Company::factory()->create();
-    $admin = User::factory()->for($company)->companyAdmin()->create();
+    $admin = User::factory()->forCompany($company, true)->create();
     $issued = UserApiToken::issue($admin, 'test');
 
     UserRegistration::factory()->for($company)->count(2)->create();

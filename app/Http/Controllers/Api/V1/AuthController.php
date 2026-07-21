@@ -40,7 +40,7 @@ class AuthController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-        $user->loadMissing('company');
+        $user->loadMissing(['companies' => fn ($query) => $query->where('is_active', true)]);
 
         return new AuthUserResource($user);
     }

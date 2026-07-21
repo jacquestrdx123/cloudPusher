@@ -16,19 +16,34 @@ class AuthUserResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $companies = $this->relationLoaded('companies')
+            ? $this->companies
+            : $this->companies()->where('is_active', true)->get();
+
+        $mappedCompanies = $companies->map(fn ($company) => [
+            'id' => $company->id,
+            'name' => $company->name,
+            'slug' => $company->slug,
+            'is_company_admin' => (bool) $company->pivot->is_company_admin,
+        ])->values()->all();
+
+        $firstCompany = $companies->first();
+
         return [
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
             'phone' => $this->phone,
             'locale' => $this->locale,
-            'company_id' => $this->company_id,
-            'is_company_admin' => (bool) $this->is_company_admin,
-            'company' => $this->whenLoaded('company', fn () => $this->company === null ? null : [
-                'id' => $this->company->id,
-                'name' => $this->company->name,
-                'slug' => $this->company->slug,
-            ]),
+            'companies' => $mappedCompanies,
+            // Compatibility for clients still expecting a single company.
+            'company_id' => $firstCompany?->id,
+            'is_company_admin' => $firstCompany !== null && (bool) $firstCompany->pivot->is_company_admin,
+            'company' => $firstCompany === null ? null : [
+                'id' => $firstCompany->id,
+                'name' => $firstCompany->name,
+                'slug' => $firstCompany->slug,
+            ],
         ];
     }
 }

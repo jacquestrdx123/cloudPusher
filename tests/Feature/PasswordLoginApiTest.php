@@ -7,7 +7,7 @@ use App\Models\UserNotification;
 
 it('logs in with phone and password and returns a personal api token', function () {
     $company = Company::factory()->create();
-    $user = User::factory()->for($company)->create([
+    $user = User::factory()->forCompany($company)->create([
         'phone' => '+27821234567',
         'password' => 'password',
     ]);
@@ -28,7 +28,7 @@ it('logs in with phone and password and returns a personal api token', function 
 
 it('rejects invalid login credentials', function () {
     $company = Company::factory()->create();
-    User::factory()->for($company)->create([
+    User::factory()->forCompany($company)->create([
         'phone' => '+27821234567',
         'password' => 'password',
     ]);
@@ -41,7 +41,7 @@ it('rejects invalid login credentials', function () {
 
 it('allows inbox access after password login', function () {
     $company = Company::factory()->create();
-    $user = User::factory()->for($company)->create([
+    $user = User::factory()->forCompany($company)->create([
         'phone' => '+27821234567',
         'password' => 'password',
     ]);
@@ -64,7 +64,7 @@ it('allows inbox access after password login', function () {
 
 it('returns the authenticated user and supports logout', function () {
     $company = Company::factory()->create();
-    $user = User::factory()->for($company)->create([
+    $user = User::factory()->forCompany($company)->create([
         'phone' => '+27821234567',
         'password' => 'password',
     ]);

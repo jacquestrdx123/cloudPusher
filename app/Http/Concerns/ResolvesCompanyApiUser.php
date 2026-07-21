@@ -13,7 +13,7 @@ trait ResolvesCompanyApiUser
     {
         $authenticated = $request->user();
 
-        if ($authenticated instanceof User && (int) $authenticated->company_id === (int) $company->id) {
+        if ($authenticated instanceof User && $authenticated->belongsToCompany($company)) {
             return $authenticated;
         }
 

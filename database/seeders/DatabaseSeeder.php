@@ -30,14 +30,14 @@ class DatabaseSeeder extends Seeder
             'default_channels' => ['push', 'mail'],
         ]);
 
-        User::factory()->for($acme)->companyAdmin()->create([
+        User::factory()->forCompany($acme, true)->create([
             'name' => 'Acme Admin',
             'email' => 'company@example.com',
             'phone' => '+27821110001',
             'password' => 'password',
         ]);
 
-        $users = User::factory()->for($acme)->count(5)->create();
+        $users = User::factory()->forCompany($acme)->count(5)->create();
         $users->each(fn (User $user) => DeviceToken::factory()->fcm()->for($user)->create());
 
         $ops = UserGroup::factory()->for($acme)->create(['name' => 'Ops Team', 'slug' => 'ops']);
@@ -49,13 +49,13 @@ class DatabaseSeeder extends Seeder
             'default_channels' => ['push'],
         ]);
 
-        User::factory()->for($beta)->companyAdmin()->create([
+        User::factory()->forCompany($beta, true)->create([
             'name' => 'Beta Admin',
             'email' => 'beta-admin@example.com',
             'phone' => '+27821110002',
             'password' => 'password',
         ]);
 
-        User::factory()->for($beta)->count(2)->create();
+        User::factory()->forCompany($beta)->count(2)->create();
     }
 }

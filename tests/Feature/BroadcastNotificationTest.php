@@ -12,7 +12,7 @@ it('queues a broadcast notification to all company users', function () {
     Queue::fake();
 
     $company = Company::factory()->create();
-    User::factory()->for($company)->count(3)->create();
+    User::factory()->forCompany($company)->count(3)->create();
     User::factory()->create();
 
     test()->postJson(
@@ -41,7 +41,7 @@ it('fans out a broadcast to every user in the company', function () {
     Notification::fake();
 
     $company = Company::factory()->create();
-    $users = User::factory()->for($company)->count(3)->create();
+    $users = User::factory()->forCompany($company)->count(3)->create();
     User::factory()->create();
 
     $notification = PushNotification::factory()->create([

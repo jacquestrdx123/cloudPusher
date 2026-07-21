@@ -33,10 +33,10 @@ it('fans out to every member of a target group', function () {
 
     $company = Company::factory()->create();
     $group = UserGroup::factory()->for($company)->create();
-    $members = User::factory()->for($company)->count(3)->create();
+    $members = User::factory()->forCompany($company)->count(3)->create();
     $group->users()->attach($members);
 
-    $nonMember = User::factory()->for($company)->create();
+    $nonMember = User::factory()->forCompany($company)->create();
 
     $notification = PushNotification::factory()->forGroup($group)->create(['channels' => ['mail']]);
 

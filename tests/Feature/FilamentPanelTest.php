@@ -26,7 +26,6 @@ beforeEach(function () {
 it('denies panel access to users who are not platform or company admins', function () {
     $panelUser = User::factory()->create([
         'is_admin' => false,
-        'is_company_admin' => false,
     ]);
 
     $this->actingAs($panelUser)
@@ -35,7 +34,7 @@ it('denies panel access to users who are not platform or company admins', functi
 });
 
 it('allows company admins to open the panel', function () {
-    $companyAdmin = User::factory()->for($this->company)->companyAdmin()->create();
+    $companyAdmin = User::factory()->forCompany($this->company, true)->create();
 
     $this->actingAs($companyAdmin)
         ->get('/admin')
@@ -49,7 +48,7 @@ it('redirects admins from the panel root to their default tenant', function () {
 
 it('renders every resource list page', function (string $page) {
     Company::factory()->has(User::factory()->count(2))->create();
-    User::factory()->for($this->company)->count(2)->create();
+    User::factory()->forCompany($this->company)->count(2)->create();
     PushNotification::factory()->for($this->company)->create();
 
     Livewire::test($page)

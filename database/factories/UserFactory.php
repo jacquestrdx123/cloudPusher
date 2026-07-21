@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use WeakMap;
 
 /**
  * @extends Factory<User>
@@ -19,6 +20,19 @@ class UserFactory extends Factory
     protected static ?string $password;
 
     /**
+     * @var WeakMap<User, array{company: Company|Factory<Company>|null, admin: bool}>|null
+     */
+    private static ?WeakMap $pendingMemberships = null;
+
+    /**
+     * @return WeakMap<User, array{company: Company|Factory<Company>|null, admin: bool}>
+     */
+    private static function pendingMemberships(): WeakMap
+    {
+        return self::$pendingMemberships ??= new WeakMap;
+    }
+
+    /**
      * Define the model's default state.
      *
      * @return array<string, mixed>
@@ -26,17 +40,60 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'company_id' => Company::factory(),
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'phone' => fake()->e164PhoneNumber(),
             'locale' => null,
             'is_admin' => false,
-            'is_company_admin' => false,
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
         ];
+    }
+
+    public function configure(): static
+    {
+        return $this->afterCreating(function (User $user): void {
+            if ($user->is_admin) {
+                return;
+            }
+
+            $pending = self::pendingMemberships()[$user] ?? null;
+
+            if ($pending !== null) {
+                if ($pending['company'] !== null) {
+                    $company = $pending['company'] instanceof Company
+                        ? $pending['company']
+                        : $pending['company']->create();
+
+                    $user->companies()->syncWithoutDetaching([
+                        $company->getKey() => ['is_company_admin' => $pending['admin']],
+                    ]);
+                } elseif ($pending['admin']) {
+                    if ($user->companies()->exists()) {
+                        $user->companies()->newPivotQuery()
+                            ->where('user_id', $user->id)
+                            ->update(['is_company_admin' => true]);
+                    } else {
+                        $user->companies()->attach(Company::factory()->create()->id, [
+                            'is_company_admin' => true,
+                        ]);
+                    }
+                }
+
+                unset(self::pendingMemberships()[$user]);
+
+                return;
+            }
+
+            if ($user->companies()->exists()) {
+                return;
+            }
+
+            $user->companies()->attach(Company::factory()->create()->id, [
+                'is_company_admin' => false,
+            ]);
+        });
     }
 
     /**
@@ -55,17 +112,34 @@ class UserFactory extends Factory
     public function admin(): static
     {
         return $this->state(fn (array $attributes) => [
-            'company_id' => null,
             'is_admin' => true,
-            'is_company_admin' => false,
         ]);
+    }
+
+    /**
+     * @param  Company|Factory<Company>  $company
+     */
+    public function forCompany(Company|Factory $company, bool $isCompanyAdmin = false): static
+    {
+        return $this->afterMaking(function (User $user) use ($company, $isCompanyAdmin): void {
+            $existing = self::pendingMemberships()[$user] ?? ['company' => null, 'admin' => false];
+
+            self::pendingMemberships()[$user] = [
+                'company' => $company,
+                'admin' => $isCompanyAdmin || $existing['admin'],
+            ];
+        });
     }
 
     public function companyAdmin(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'is_admin' => false,
-            'is_company_admin' => true,
-        ]);
+        return $this->afterMaking(function (User $user): void {
+            $existing = self::pendingMemberships()[$user] ?? ['company' => null, 'admin' => false];
+
+            self::pendingMemberships()[$user] = [
+                'company' => $existing['company'],
+                'admin' => true,
+            ];
+        });
     }
 }

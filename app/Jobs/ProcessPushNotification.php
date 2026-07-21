@@ -90,7 +90,7 @@ class ProcessPushNotification implements ShouldQueue
         if ($notification->target_type === PushNotification::TARGET_BROADCAST) {
             return User::query()
                 ->with('deviceTokens')
-                ->where('company_id', $notification->company_id)
+                ->membersOf($notification->company)
                 ->get();
         }
 

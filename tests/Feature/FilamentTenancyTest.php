@@ -29,8 +29,8 @@ it('scopes the users list to the current company tenant', function () {
     $companyA = Company::factory()->create();
     $companyB = Company::factory()->create();
 
-    $userA = User::factory()->for($companyA)->create(['name' => 'Tenant A User']);
-    $userB = User::factory()->for($companyB)->create(['name' => 'Tenant B User']);
+    $userA = User::factory()->forCompany($companyA)->create(['name' => 'Tenant A User']);
+    $userB = User::factory()->forCompany($companyB)->create(['name' => 'Tenant B User']);
 
     Filament::setTenant($companyA);
 
@@ -44,7 +44,7 @@ it('returns not found when editing a user from another company', function () {
     $companyA = Company::factory()->create(['slug' => 'acme']);
     $companyB = Company::factory()->create(['slug' => 'other']);
 
-    $foreignUser = User::factory()->for($companyB)->create();
+    $foreignUser = User::factory()->forCompany($companyB)->create();
 
     Filament::setTenant($companyA);
 
