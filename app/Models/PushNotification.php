@@ -18,6 +18,10 @@ use Illuminate\Support\Carbon;
  * @property int|null $user_group_id
  * @property string $title
  * @property string|null $body
+ * @property string|null $image_url
+ * @property string|null $sound
+ * @property string|null $category
+ * @property string|null $android_channel_id
  * @property array<string, mixed>|null $data
  * @property array<int, string> $channels
  * @property string $status
@@ -31,7 +35,8 @@ use Illuminate\Support\Carbon;
  */
 #[Fillable([
     'company_id', 'target_type', 'user_id', 'user_group_id',
-    'title', 'body', 'data', 'channels', 'status', 'recipients_count', 'scheduled_at',
+    'title', 'body', 'image_url', 'sound', 'category', 'android_channel_id',
+    'data', 'channels', 'status', 'recipients_count', 'scheduled_at',
 ])]
 class PushNotification extends Model
 {

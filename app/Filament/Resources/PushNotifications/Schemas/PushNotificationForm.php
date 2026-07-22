@@ -26,6 +26,13 @@ class PushNotificationForm
                     ->required(),
                 Textarea::make('body')
                     ->columnSpanFull(),
+                TextInput::make('image_url')
+                    ->label('Image URL')
+                    ->columnSpanFull(),
+                TextInput::make('sound'),
+                TextInput::make('category'),
+                TextInput::make('android_channel_id')
+                    ->label('Android channel ID'),
                 Textarea::make('data')
                     ->columnSpanFull(),
                 Textarea::make('channels')

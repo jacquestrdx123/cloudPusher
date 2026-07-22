@@ -29,11 +29,22 @@ class PushNotificationFactory extends Factory
             'user_group_id' => null,
             'title' => fake()->sentence(4),
             'body' => fake()->sentence(),
+            'image_url' => null,
+            'sound' => null,
+            'category' => null,
+            'android_channel_id' => null,
             'data' => [],
             'channels' => ['push'],
             'status' => PushNotification::STATUS_PENDING,
             'recipients_count' => 0,
         ];
+    }
+
+    public function withImage(?string $url = null): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'image_url' => $url ?? 'https://picsum.photos/1024/512',
+        ]);
     }
 
     public function forUser(User $user): static

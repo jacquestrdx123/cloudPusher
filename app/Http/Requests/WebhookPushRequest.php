@@ -39,6 +39,10 @@ class WebhookPushRequest extends FormRequest
      *     target: array{type: string, id?: int|null, email?: string|null, slug?: string|null},
      *     title: string,
      *     body?: string|null,
+     *     image_url?: string|null,
+     *     sound?: string|null,
+     *     category?: string|null,
+     *     android_channel_id?: string|null,
      *     data?: array<string, mixed>|null,
      *     channels?: array<int, string>|null,
      *     scheduled_at?: string|null
@@ -46,29 +50,6 @@ class WebhookPushRequest extends FormRequest
      */
     public function payload(): array
     {
-        $payload = [
-            'target' => $this->targetPayload(),
-            'title' => $this->string('title')->toString(),
-        ];
-
-        if ($this->filled('body')) {
-            $payload['body'] = $this->string('body')->toString();
-        }
-
-        if ($this->filled('data')) {
-            $payload['data'] = $this->array('data');
-        }
-
-        if ($this->filled('channels')) {
-            /** @var array<int, string> $channels */
-            $channels = $this->array('channels');
-            $payload['channels'] = $channels;
-        }
-
-        if ($this->filled('scheduled_at')) {
-            $payload['scheduled_at'] = $this->string('scheduled_at')->toString();
-        }
-
-        return $payload;
+        return $this->notificationPayload();
     }
 }

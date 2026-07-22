@@ -27,6 +27,10 @@ class WebhookPushNotification extends Notification implements ShouldQueue
         public ?string $body,
         public array $channels,
         public array $data = [],
+        public ?string $imageUrl = null,
+        public ?string $sound = null,
+        public ?string $category = null,
+        public ?string $androidChannelId = null,
     ) {}
 
     /**
@@ -143,14 +147,29 @@ class WebhookPushNotification extends Notification implements ShouldQueue
 
     public function toFcm(object $notifiable): FcmMessage
     {
-        $sound = (string) config('pushservice.notification_sound', 'default');
+        $sound = $this->resolvedSound();
+        $channelId = $this->resolvedAndroidChannelId();
+        $androidSound = (string) config('pushservice.android_notification_sound', 'notification');
 
         $data = array_merge($this->stringData(), [
             'title' => $this->title,
             'body' => (string) $this->body,
             'push_notification_id' => (string) $this->pushNotificationId,
             'sound' => $sound,
+            'image' => (string) ($this->imageUrl ?? ''),
         ]);
+
+        $androidNotification = [
+            'title' => $this->title,
+            'body' => (string) $this->body,
+            'channel_id' => $channelId,
+            'sound' => $androidSound,
+            'visibility' => 'PUBLIC',
+        ];
+
+        if ($this->imageUrl !== null && $this->imageUrl !== '') {
+            $androidNotification['image'] = $this->imageUrl;
+        }
 
         /*
          * Data-only message. A top-level `notification` block makes web (FCM
@@ -166,12 +185,8 @@ class WebhookPushNotification extends Notification implements ShouldQueue
         return (new FcmMessage)
             ->data($data)
             ->android([
-                'notification' => [
-                    'title' => $this->title,
-                    'body' => (string) $this->body,
-                    'sound' => $sound,
-                    'default_sound' => true,
-                ],
+                'priority' => 'high',
+                'notification' => $androidNotification,
             ]);
     }
 
@@ -180,7 +195,15 @@ class WebhookPushNotification extends Notification implements ShouldQueue
         $message = ApnMessage::create()
             ->title($this->title)
             ->body($this->body)
-            ->sound(config('pushservice.notification_sound', 'default'));
+            ->sound($this->resolvedSound())
+            ->category($this->resolvedCategory())
+            ->mutableContent()
+            ->custom('push_notification_id', (string) $this->pushNotificationId);
+
+        if ($this->imageUrl !== null && $this->imageUrl !== '') {
+            $message->custom('media_url', $this->imageUrl);
+            $message->custom('media_type', 'image');
+        }
 
         foreach ($this->data as $key => $value) {
             $message->custom((string) $key, $value);
@@ -211,16 +234,41 @@ class WebhookPushNotification extends Notification implements ShouldQueue
         return (bool) config("pushservice.providers.{$provider}");
     }
 
+    private function resolvedSound(): string
+    {
+        return $this->sound
+            ?? (string) config('pushservice.notification_sound', 'default');
+    }
+
+    private function resolvedCategory(): string
+    {
+        return $this->category
+            ?? (string) config('pushservice.notification_category', 'RICH_MESSAGE');
+    }
+
+    private function resolvedAndroidChannelId(): string
+    {
+        return $this->androidChannelId
+            ?? (string) config('pushservice.android_channel_id', 'rich_messages_v1');
+    }
+
     /**
-     * FCM requires all data values to be strings.
+     * FCM requires all data values to be strings. Also merges image into the
+     * payload so the in-app inbox (and web SW) can render rich media.
      *
      * @return array<string, string>
      */
     private function stringData(): array
     {
+        $data = $this->data;
+
+        if ($this->imageUrl !== null && $this->imageUrl !== '' && ! array_key_exists('image', $data)) {
+            $data['image'] = $this->imageUrl;
+        }
+
         return array_map(
             fn ($value): string => is_scalar($value) ? (string) $value : (string) json_encode($value),
-            $this->data,
+            $data,
         );
     }
 }

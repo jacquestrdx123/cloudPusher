@@ -48,12 +48,22 @@ class ProcessPushNotification implements ShouldQueue
             return;
         }
 
+        $data = $notification->data ?? [];
+
+        if ($notification->image_url !== null && $notification->image_url !== '') {
+            $data['image'] = $notification->image_url;
+        }
+
         $outbound = new WebhookPushNotification(
             pushNotificationId: $notification->id,
             title: $notification->title,
             body: $notification->body,
             channels: $notification->channels,
-            data: $notification->data ?? [],
+            data: $data,
+            imageUrl: $notification->image_url,
+            sound: $notification->sound,
+            category: $notification->category,
+            androidChannelId: $notification->android_channel_id,
         );
 
         $deliverable = new Collection;

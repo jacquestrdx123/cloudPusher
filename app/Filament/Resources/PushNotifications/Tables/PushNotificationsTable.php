@@ -35,6 +35,10 @@ class PushNotificationsTable
                 TextColumn::make('title')
                     ->searchable()
                     ->limit(40),
+                TextColumn::make('image_url')
+                    ->label('Image')
+                    ->limit(30)
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('channels')
                     ->badge()
                     ->separator(','),

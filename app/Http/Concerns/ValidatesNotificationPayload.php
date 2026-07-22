@@ -26,6 +26,10 @@ trait ValidatesNotificationPayload
             'target.slug' => ['nullable', 'string', 'max:255'],
             'title' => ['required', 'string', 'max:255'],
             'body' => ['nullable', 'string', 'max:2000'],
+            'image_url' => ['nullable', 'url', 'starts_with:https://', 'max:2048'],
+            'sound' => ['nullable', 'string', 'max:64'],
+            'category' => ['nullable', 'string', 'max:64'],
+            'android_channel_id' => ['nullable', 'string', 'max:64'],
             'data' => ['nullable', 'array'],
             'channels' => ['nullable', 'array'],
             'channels.*' => [Rule::in(['push', 'mail', 'sms'])],
@@ -76,5 +80,63 @@ trait ValidatesNotificationPayload
         }
 
         return $target;
+    }
+
+    /**
+     * @return array{
+     *     target: array{type: string, id?: int|null, email?: string|null, slug?: string|null},
+     *     title: string,
+     *     body?: string|null,
+     *     image_url?: string|null,
+     *     sound?: string|null,
+     *     category?: string|null,
+     *     android_channel_id?: string|null,
+     *     data?: array<string, mixed>|null,
+     *     channels?: array<int, string>|null,
+     *     scheduled_at?: string|null
+     * }
+     */
+    protected function notificationPayload(): array
+    {
+        $payload = [
+            'target' => $this->targetPayload(),
+            'title' => $this->string('title')->toString(),
+        ];
+
+        if ($this->filled('body')) {
+            $payload['body'] = $this->string('body')->toString();
+        }
+
+        if ($this->filled('image_url')) {
+            $payload['image_url'] = $this->string('image_url')->toString();
+        }
+
+        if ($this->filled('sound')) {
+            $payload['sound'] = $this->string('sound')->toString();
+        }
+
+        if ($this->filled('category')) {
+            $payload['category'] = $this->string('category')->toString();
+        }
+
+        if ($this->filled('android_channel_id')) {
+            $payload['android_channel_id'] = $this->string('android_channel_id')->toString();
+        }
+
+        if ($this->filled('data')) {
+            $payload['data'] = $this->array('data');
+        }
+
+        if ($this->filled('channels')) {
+            /** @var array<int, string> $channels */
+            $channels = $this->array('channels');
+            $payload['channels'] = $channels;
+        }
+
+        if ($this->filled('scheduled_at')) {
+            $payload['scheduled_at'] = $this->string('scheduled_at')->toString();
+        }
+
+        return $payload;
     }
 }

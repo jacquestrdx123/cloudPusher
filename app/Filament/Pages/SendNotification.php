@@ -132,6 +132,26 @@ class SendNotification extends Page
                 Textarea::make('body')
                     ->maxLength(2000)
                     ->columnSpanFull(),
+                TextInput::make('image_url')
+                    ->label('Image URL')
+                    ->url()
+                    ->rules(['nullable', 'starts_with:https://'])
+                    ->maxLength(2048)
+                    ->helperText('HTTPS URL shown as the rich push image on iOS, Android, and web.')
+                    ->columnSpanFull(),
+                TextInput::make('sound')
+                    ->maxLength(64)
+                    ->placeholder(config('pushservice.notification_sound', 'default'))
+                    ->helperText('Optional. Defaults to the configured notification sound.'),
+                TextInput::make('category')
+                    ->maxLength(64)
+                    ->placeholder(config('pushservice.notification_category', 'RICH_MESSAGE'))
+                    ->helperText('APNs category. Defaults to RICH_MESSAGE.'),
+                TextInput::make('android_channel_id')
+                    ->label('Android channel ID')
+                    ->maxLength(64)
+                    ->placeholder(config('pushservice.android_channel_id', 'rich_messages_v1'))
+                    ->helperText('Must match the channel the Android app creates.'),
                 Select::make('channels')
                     ->multiple()
                     ->options([
@@ -181,6 +201,22 @@ class SendNotification extends Page
             'body' => $state['body'] ?? null,
             'channels' => $state['channels'],
         ];
+
+        if (! empty($state['image_url'])) {
+            $payload['image_url'] = $state['image_url'];
+        }
+
+        if (! empty($state['sound'])) {
+            $payload['sound'] = $state['sound'];
+        }
+
+        if (! empty($state['category'])) {
+            $payload['category'] = $state['category'];
+        }
+
+        if (! empty($state['android_channel_id'])) {
+            $payload['android_channel_id'] = $state['android_channel_id'];
+        }
 
         if (! empty($state['scheduled_at'])) {
             $payload['scheduled_at'] = $state['scheduled_at'];

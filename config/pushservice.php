@@ -77,10 +77,28 @@ return [
     |
     | Default sound played on iOS (APNs) and Android (FCM) when a push arrives.
     | Use "default" for the system notification sound on each platform.
+    | Per-push `sound` overrides this when set.
     |
     */
 
     'notification_sound' => env('PUSH_NOTIFICATION_SOUND', 'default'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Rich Push Defaults
+    |--------------------------------------------------------------------------
+    |
+    | APNs category enables action buttons / the Notification Service Extension
+    | path. Android channel id must match the channel the receiver app creates
+    | (currently rich_messages_v1). Per-push values override these defaults.
+    |
+    */
+
+    'notification_category' => env('PUSH_NOTIFICATION_CATEGORY', 'RICH_MESSAGE'),
+
+    'android_channel_id' => env('PUSH_ANDROID_CHANNEL_ID', 'rich_messages_v1'),
+
+    'android_notification_sound' => env('PUSH_ANDROID_NOTIFICATION_SOUND', 'notification'),
 
     /*
     |--------------------------------------------------------------------------
