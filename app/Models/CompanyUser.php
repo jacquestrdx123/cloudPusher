@@ -11,6 +11,7 @@ use Illuminate\Support\Carbon;
  * @property int $company_id
  * @property int $user_id
  * @property bool $is_company_admin
+ * @property string|null $external_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */

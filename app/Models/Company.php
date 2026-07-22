@@ -81,7 +81,7 @@ class Company extends Model implements HasCurrentTenantLabel, HasName
     {
         return $this->belongsToMany(User::class)
             ->using(CompanyUser::class)
-            ->withPivot('is_company_admin')
+            ->withPivot('is_company_admin', 'external_id')
             ->withTimestamps();
     }
 
