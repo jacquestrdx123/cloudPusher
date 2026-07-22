@@ -89,6 +89,74 @@ GET /api/v1/{company_slug}/notifications?per_page=25
 GET /api/v1/{company_slug}/notifications/{id}
 ```
 
+### Directory sync (provision company + sync users/groups)
+
+An upstream system can provision a company and keep its users and user groups
+in sync. Company provisioning uses a platform-level provisioning key
+(`PUSH_PROVISIONING_KEY`); leave it empty to disable the endpoint.
+
+**1. Create a company** (returns its `hmac_secret`, used for later calls):
+
+```http
+POST /api/v1/companies
+Authorization: Bearer {provisioning_key}
+
+{
+  "name": "Acme Corp",
+  "slug": "acme-corp",            // optional; generated from name if omitted
+  "default_channels": ["push", "mail"],
+  "is_active": true
+}
+```
+
+Returns `201 Created` (or `200 OK` with `"created": false` when the slug
+already exists — provisioning is idempotent).
+
+**2. Sync users and groups** — declarative and idempotent. Authenticate with
+the company's `hmac_secret` **or** the provisioning key:
+
+```http
+PUT /api/v1/{company_slug}/sync
+Authorization: Bearer {company_hmac_secret | provisioning_key}
+
+{
+  "users": [
+    { "external_id": "u-1", "name": "Jane Doe", "email": "jane@acme.test", "phone": "+27821234567", "is_company_admin": true },
+    { "external_id": "u-2", "name": "John Roe", "email": "john@acme.test" }
+  ],
+  "groups": [
+    {
+      "external_id": "g-1",
+      "name": "Engineering",
+      "members": [ { "external_id": "u-1" }, { "email": "john@acme.test" } ]
+    }
+  ],
+  "delete_missing_users": false,
+  "delete_missing_groups": false
+}
+```
+
+- Users are matched (within the company) by `external_id`, then `email`, then
+  `phone`; unmatched records create a new platform user. Users are processed
+  before groups, so newly synced users can be referenced as group members in
+  the same request.
+- A group's `members` list becomes its authoritative membership. Members must
+  already belong to the company; unresolved references are reported under
+  `groups.skipped`.
+- `delete_missing_users` detaches company members absent from the payload (the
+  global user is preserved); `delete_missing_groups` deletes absent groups.
+- Both `users` and `groups` are optional — send either or both.
+
+The response summarises the reconciliation:
+
+```json
+{
+  "company": { "id": 1, "name": "Acme Corp", "slug": "acme-corp" },
+  "users":  { "created": 2, "updated": 0, "unchanged": 0, "removed": 0, "skipped": [] },
+  "groups": { "created": 1, "updated": 0, "unchanged": 0, "removed": 0, "members_synced": 2, "skipped": [] }
+}
+```
+
 ### Mobile registration + password login
 
 ```http

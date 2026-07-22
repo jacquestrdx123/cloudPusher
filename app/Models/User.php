@@ -63,7 +63,7 @@ class User extends Authenticatable implements FilamentUser, HasDefaultTenant, Ha
     {
         return $this->belongsToMany(Company::class)
             ->using(CompanyUser::class)
-            ->withPivot('is_company_admin')
+            ->withPivot('is_company_admin', 'external_id')
             ->withTimestamps();
     }
 

@@ -16,11 +16,12 @@ use Illuminate\Support\Str;
  * @property int $company_id
  * @property string $name
  * @property string $slug
+ * @property string|null $external_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Company $company
  */
-#[Fillable(['company_id', 'name', 'slug'])]
+#[Fillable(['company_id', 'name', 'slug', 'external_id'])]
 class UserGroup extends Model
 {
     /** @use HasFactory<UserGroupFactory> */
