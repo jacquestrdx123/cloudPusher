@@ -24,26 +24,8 @@ class ApproveUserRegistration
             ]);
         }
 
-        if (User::query()->where('phone', $registration->phone)->exists()) {
-            throw ValidationException::withMessages([
-                'phone' => ['This mobile number is already registered to another user.'],
-            ]);
-        }
-
-        if (User::query()->where('email', $registration->email)->exists()) {
-            throw ValidationException::withMessages([
-                'email' => ['This email address is already registered to another user.'],
-            ]);
-        }
-
         return DB::transaction(function () use ($registration, $reviewer, $notes): User {
-            $user = User::query()->create([
-                'name' => $registration->name,
-                'email' => $registration->email,
-                'phone' => $registration->phone,
-                'password' => $registration->password,
-                'is_admin' => false,
-            ]);
+            $user = $this->resolveUser($registration);
 
             $user->companies()->syncWithoutDetaching([
                 $registration->company_id => ['is_company_admin' => false],
@@ -59,5 +41,35 @@ class ApproveUserRegistration
 
             return $user->load('companies');
         });
+    }
+
+    /**
+     * Prefer an existing platform user (by phone, then email) so approval only
+     * associates them with the company instead of creating a duplicate.
+     */
+    private function resolveUser(UserRegistration $registration): User
+    {
+        $byPhone = User::query()->where('phone', $registration->phone)->first();
+        $byEmail = User::query()->where('email', $registration->email)->first();
+
+        if ($byPhone instanceof User && $byEmail instanceof User && $byPhone->isNot($byEmail)) {
+            throw ValidationException::withMessages([
+                'registration' => ['Phone and email belong to different existing users.'],
+            ]);
+        }
+
+        $existing = $byPhone ?? $byEmail;
+
+        if ($existing instanceof User) {
+            return $existing;
+        }
+
+        return User::query()->create([
+            'name' => $registration->name,
+            'email' => $registration->email,
+            'phone' => $registration->phone,
+            'password' => $registration->password,
+            'is_admin' => false,
+        ]);
     }
 }

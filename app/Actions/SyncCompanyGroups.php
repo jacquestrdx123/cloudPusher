@@ -128,20 +128,20 @@ class SyncCompanyGroups
     }
 
     /**
-     * Build lookup maps of the company's members keyed by external_id, email,
-     * and phone so member references resolve without per-row queries.
+     * Build lookup maps of the company's members keyed by external_id, mobile
+     * number, and email so member references resolve without per-row queries.
      *
-     * @return array{external: array<string, int>, email: array<string, int>, phone: array<string, int>}
+     * @return array{external: array<string, int>, mobile: array<string, int>, email: array<string, int>}
      */
     private function buildMemberIndex(Company $company): array
     {
-        $index = ['external' => [], 'email' => [], 'phone' => []];
+        $index = ['external' => [], 'mobile' => [], 'email' => []];
 
         foreach ($company->users()->get() as $user) {
             $index['email'][strtolower($user->email)] = $user->id;
 
             if ($user->phone !== null) {
-                $index['phone'][$user->phone] = $user->id;
+                $index['mobile'][$user->phone] = $user->id;
             }
 
             $externalId = $user->getRelationValue('pivot')?->external_id;
@@ -156,7 +156,7 @@ class SyncCompanyGroups
 
     /**
      * @param  array<int, mixed>  $members
-     * @param  array{external: array<string, int>, email: array<string, int>, phone: array<string, int>}  $index
+     * @param  array{external: array<string, int>, mobile: array<string, int>, email: array<string, int>}  $index
      * @param  array{created: int, updated: int, unchanged: int, removed: int, members_synced: int, skipped: array<int, array{group: string|null, member?: string, reason: string}>}  $summary
      */
     private function syncMembers(UserGroup $group, array $members, array $index, ?string $groupRef, array &$summary): bool
@@ -173,7 +173,7 @@ class SyncCompanyGroups
             if ($userId === null) {
                 $summary['skipped'][] = [
                     'group' => $groupRef ?? $group->slug,
-                    'member' => (string) ($member['external_id'] ?? $member['email'] ?? $member['phone'] ?? ''),
+                    'member' => (string) ($member['external_id'] ?? $member['mobile_number'] ?? $member['email'] ?? $member['phone'] ?? ''),
                     'reason' => 'Member is not a user of this company; sync the user first.',
                 ];
 
@@ -192,7 +192,7 @@ class SyncCompanyGroups
 
     /**
      * @param  array<string, mixed>  $member
-     * @param  array{external: array<string, int>, email: array<string, int>, phone: array<string, int>}  $index
+     * @param  array{external: array<string, int>, mobile: array<string, int>, email: array<string, int>}  $index
      */
     private function resolveMember(array $member, array $index): ?int
     {
@@ -204,16 +204,18 @@ class SyncCompanyGroups
             }
         }
 
-        if (isset($member['email']) && filled($member['email'])) {
-            $id = $index['email'][strtolower(trim((string) $member['email']))] ?? null;
+        $rawMobile = $member['mobile_number'] ?? $member['phone'] ?? null;
+
+        if (filled($rawMobile)) {
+            $id = $index['mobile'][PhoneNumber::normalize((string) $rawMobile)] ?? null;
 
             if ($id !== null) {
                 return $id;
             }
         }
 
-        if (isset($member['phone']) && filled($member['phone'])) {
-            return $index['phone'][PhoneNumber::normalize((string) $member['phone'])] ?? null;
+        if (isset($member['email']) && filled($member['email'])) {
+            return $index['email'][strtolower(trim((string) $member['email']))] ?? null;
         }
 
         return null;

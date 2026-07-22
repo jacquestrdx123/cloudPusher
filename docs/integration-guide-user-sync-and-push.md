@@ -223,15 +223,15 @@ Either token works:
     {
       "external_id": "u-1001",
       "name": "Jane Doe",
+      "mobile_number": "+27821234567",
       "email": "jane@acme.test",
-      "phone": "+27821234567",
       "locale": "en",
       "is_company_admin": true
     },
     {
       "external_id": "u-1002",
       "name": "John Roe",
-      "email": "john@acme.test"
+      "mobile_number": "+27829876543"
     }
   ],
   "delete_missing_users": false
@@ -240,10 +240,10 @@ Either token works:
 
 | Field | Required | Notes |
 |-------|----------|--------|
-| `email` | **Yes** | Primary identity when no `external_id` match |
+| `mobile_number` | **Yes** | Primary identity (normalized E.164-ish). Legacy `phone` is accepted as an alias |
 | `external_id` | Strongly recommended | Your system's immutable user id; stored on the company↔user pivot |
-| `name` | No | Defaults to email on create |
-| `phone` | No | Normalized (E.164-ish). Used as tertiary match key |
+| `email` | No | Optional; used as a secondary match key. A placeholder is stored if omitted |
+| `name` | No | Defaults to mobile number on create |
 | `locale` | No | Optional locale string |
 | `is_company_admin` | No | Company-admin flag on the pivot |
 
@@ -252,15 +252,15 @@ Either token works:
 Within the company:
 
 1. Pivot `external_id` (if provided)
-2. Global `email`
-3. Global `phone` (if provided)
+2. Global `mobile_number` / `users.phone`
+3. Global `email` (if provided)
 
 Unmatched → create a new platform user (random password; not meant for mobile login unless you also run the registration flow).
 
 #### Profile update rules
 
 - If the user was created by this company (or is already a member), profile fields can update on re-sync.
-- If the user already exists globally under another company, sync **attaches** them to your company but does **not** overwrite their global name/email/phone owned by the other tenant.
+- If the user already exists globally under another company, sync **attaches** them to your company but does **not** overwrite their global name/email/mobile owned by the other tenant.
 
 #### `delete_missing_users`
 
@@ -280,7 +280,7 @@ Use `delete_missing_users: true` only when the payload is a **full** directory s
       "slug": "engineering",
       "members": [
         { "external_id": "u-1001" },
-        { "email": "john@acme.test" }
+        { "mobile_number": "+27829876543" }
       ]
     }
   ],
@@ -295,7 +295,7 @@ Use `delete_missing_users: true` only when the payload is a **full** directory s
 | `slug` | No | Auto from name if omitted |
 | `members` | No | If present, becomes the **authoritative** membership list |
 
-Member refs resolve by `external_id`, then `email`, then `phone`. Members must already belong to the company — sync users in the **same request** (users run first) or in a prior sync. Unresolved members appear under `groups.skipped`.
+Member refs resolve by `external_id`, then `mobile_number`, then `email`. Members must already belong to the company — sync users in the **same request** (users run first) or in a prior sync. Unresolved members appear under `groups.skipped`.
 
 #### `delete_missing_groups`
 
@@ -338,8 +338,8 @@ curl -sS -X PUT "$BASE_URL/api/v1/acme-corp/sync" \
       {
         "external_id": "u-1001",
         "name": "Jane Doe",
+        "mobile_number": "+27821234567",
         "email": "jane@acme.test",
-        "phone": "+27821234567",
         "is_company_admin": true
       }
     ],
@@ -817,8 +817,8 @@ Request:
     {
       external_id?: string,
       name?: string,
-      email: string,          # required per row
-      phone?: string,
+      mobile_number: string,  # required per row (primary identity)
+      email?: string,
       locale?: string,
       is_company_admin?: bool
     }
@@ -829,7 +829,7 @@ Request:
       name?: string,
       slug?: string,
       members?: [
-        { external_id?: string, email?: string, phone?: string }
+        { external_id?: string, mobile_number?: string, email?: string }
       ]
     }
   ]

@@ -16,19 +16,20 @@ it('creates and attaches users to the company', function () {
 
     syncCompany($company, [
         'users' => [
-            ['external_id' => 'ext-1', 'name' => 'Jane Doe', 'email' => 'jane@acme.test', 'phone' => '+27821234567', 'is_company_admin' => true],
-            ['external_id' => 'ext-2', 'name' => 'John Roe', 'email' => 'john@acme.test'],
+            ['external_id' => 'ext-1', 'name' => 'Jane Doe', 'email' => 'jane@acme.test', 'mobile_number' => '+27821234567', 'is_company_admin' => true],
+            ['external_id' => 'ext-2', 'name' => 'John Roe', 'mobile_number' => '+27829876543'],
         ],
     ])
         ->assertOk()
         ->assertJsonPath('users.created', 2)
         ->assertJsonPath('users.updated', 0);
 
-    $jane = User::query()->where('email', 'jane@acme.test')->first();
+    $jane = User::query()->where('phone', '+27821234567')->first();
 
     expect($jane)->not->toBeNull();
     expect($jane->belongsToCompany($company))->toBeTrue();
     expect($jane->isCompanyAdminOf($company))->toBeTrue();
+    expect($jane->email)->toBe('jane@acme.test');
     expect($company->users()->count())->toBe(2);
     expect($company->users()->wherePivot('external_id', 'ext-1')->exists())->toBeTrue();
 });
@@ -37,7 +38,7 @@ it('is idempotent on re-sync', function () {
     $company = Company::factory()->create();
 
     $payload = ['users' => [
-        ['external_id' => 'ext-1', 'name' => 'Jane Doe', 'email' => 'jane@acme.test'],
+        ['external_id' => 'ext-1', 'name' => 'Jane Doe', 'mobile_number' => '+27821234567', 'email' => 'jane@acme.test'],
     ]];
 
     syncCompany($company, $payload)->assertOk();
@@ -50,15 +51,15 @@ it('is idempotent on re-sync', function () {
     expect($company->users()->count())->toBe(1);
 });
 
-it('updates a matched user profile and matches by external id across email changes', function () {
+it('updates a matched user profile and matches by external id across mobile changes', function () {
     $company = Company::factory()->create();
 
     syncCompany($company, ['users' => [
-        ['external_id' => 'ext-1', 'name' => 'Jane Doe', 'email' => 'jane@acme.test'],
+        ['external_id' => 'ext-1', 'name' => 'Jane Doe', 'mobile_number' => '+27821234567', 'email' => 'jane@acme.test'],
     ]])->assertOk();
 
     syncCompany($company, ['users' => [
-        ['external_id' => 'ext-1', 'name' => 'Jane Smith', 'email' => 'jane.smith@acme.test'],
+        ['external_id' => 'ext-1', 'name' => 'Jane Smith', 'mobile_number' => '+27829998877', 'email' => 'jane.smith@acme.test'],
     ]])
         ->assertOk()
         ->assertJsonPath('users.updated', 1);
@@ -66,18 +67,19 @@ it('updates a matched user profile and matches by external id across email chang
     $user = $company->users()->wherePivot('external_id', 'ext-1')->first();
 
     expect($user->name)->toBe('Jane Smith');
+    expect($user->phone)->toBe('+27829998877');
     expect($user->email)->toBe('jane.smith@acme.test');
     expect($company->users()->count())->toBe(1);
 });
 
 it('detaches members missing from the payload when delete_missing_users is set', function () {
     $company = Company::factory()->create();
-    $keep = User::factory()->forCompany($company)->create(['email' => 'keep@acme.test']);
-    $drop = User::factory()->forCompany($company)->create(['email' => 'drop@acme.test']);
+    $keep = User::factory()->forCompany($company)->create(['phone' => '+27821111111', 'email' => 'keep@acme.test']);
+    $drop = User::factory()->forCompany($company)->create(['phone' => '+27822222222', 'email' => 'drop@acme.test']);
 
     syncCompany($company, [
         'users' => [
-            ['name' => 'Keep', 'email' => 'keep@acme.test'],
+            ['name' => 'Keep', 'mobile_number' => '+27821111111', 'email' => 'keep@acme.test'],
         ],
         'delete_missing_users' => true,
     ])
@@ -93,14 +95,51 @@ it('detaches members missing from the payload when delete_missing_users is set',
 it('does not overwrite the global profile of a user owned by another company', function () {
     $companyA = Company::factory()->create();
     $companyB = Company::factory()->create();
-    $shared = User::factory()->forCompany($companyA)->create(['name' => 'Original', 'email' => 'shared@acme.test']);
+    $shared = User::factory()->forCompany($companyA)->create([
+        'name' => 'Original',
+        'email' => 'shared@acme.test',
+        'phone' => '+27821234567',
+    ]);
 
     syncCompany($companyB, ['users' => [
-        ['name' => 'Renamed', 'email' => 'shared@acme.test'],
+        ['name' => 'Renamed', 'mobile_number' => '+27821234567', 'email' => 'renamed@acme.test'],
     ]])->assertOk();
 
     expect($shared->fresh()->name)->toBe('Original');
+    expect($shared->fresh()->email)->toBe('shared@acme.test');
     expect($shared->fresh()->belongsToCompany($companyB))->toBeTrue();
+});
+
+it('associates an existing user by mobile_number instead of creating a duplicate', function () {
+    $companyA = Company::factory()->create();
+    $companyB = Company::factory()->create();
+    $existing = User::factory()->forCompany($companyA)->create([
+        'email' => 'shared@acme.test',
+        'phone' => '+27821234567',
+    ]);
+
+    syncCompany($companyB, ['users' => [
+        ['external_id' => 'upstream-1', 'name' => 'Should Not Apply', 'mobile_number' => '+27821234567', 'email' => 'other@acme.test'],
+    ]])
+        ->assertOk()
+        ->assertJsonPath('users.created', 1);
+
+    expect(User::query()->where('phone', '+27821234567')->count())->toBe(1)
+        ->and($existing->fresh()->belongsToCompany($companyB))->toBeTrue()
+        ->and($existing->fresh()->email)->toBe('shared@acme.test')
+        ->and($companyB->users()->wherePivot('external_id', 'upstream-1')->first()?->is($existing))->toBeTrue();
+});
+
+it('accepts legacy phone as an alias for mobile_number', function () {
+    $company = Company::factory()->create();
+
+    syncCompany($company, ['users' => [
+        ['name' => 'Jane', 'phone' => '+27821234567', 'email' => 'jane@acme.test'],
+    ]])
+        ->assertOk()
+        ->assertJsonPath('users.created', 1);
+
+    expect(User::query()->where('phone', '+27821234567')->exists())->toBeTrue();
 });
 
 it('syncs groups and their membership', function () {
@@ -108,8 +147,8 @@ it('syncs groups and their membership', function () {
 
     syncCompany($company, [
         'users' => [
-            ['external_id' => 'u1', 'name' => 'Jane', 'email' => 'jane@acme.test'],
-            ['external_id' => 'u2', 'name' => 'John', 'email' => 'john@acme.test'],
+            ['external_id' => 'u1', 'name' => 'Jane', 'mobile_number' => '+27821111111', 'email' => 'jane@acme.test'],
+            ['external_id' => 'u2', 'name' => 'John', 'mobile_number' => '+27822222222', 'email' => 'john@acme.test'],
         ],
         'groups' => [
             [
@@ -117,7 +156,7 @@ it('syncs groups and their membership', function () {
                 'name' => 'Engineering',
                 'members' => [
                     ['external_id' => 'u1'],
-                    ['email' => 'john@acme.test'],
+                    ['mobile_number' => '+27822222222'],
                 ],
             ],
         ],
@@ -138,7 +177,7 @@ it('reports members that are not company users', function () {
 
     syncCompany($company, [
         'groups' => [
-            ['external_id' => 'g1', 'name' => 'Engineering', 'members' => [['email' => 'ghost@acme.test']]],
+            ['external_id' => 'g1', 'name' => 'Engineering', 'members' => [['mobile_number' => '+27820000000']]],
         ],
     ])
         ->assertOk()
@@ -155,8 +194,8 @@ it('replaces group membership authoritatively', function () {
 
     syncCompany($company, [
         'users' => [
-            ['external_id' => 'u1', 'name' => 'Jane', 'email' => 'jane@acme.test'],
-            ['external_id' => 'u2', 'name' => 'John', 'email' => 'john@acme.test'],
+            ['external_id' => 'u1', 'name' => 'Jane', 'mobile_number' => '+27821111111', 'email' => 'jane@acme.test'],
+            ['external_id' => 'u2', 'name' => 'John', 'mobile_number' => '+27822222222', 'email' => 'john@acme.test'],
         ],
         'groups' => [
             ['external_id' => 'g1', 'name' => 'Engineering', 'members' => [['external_id' => 'u1'], ['external_id' => 'u2']]],
@@ -198,7 +237,7 @@ it('authenticates the sync endpoint with the provisioning key', function () {
     $company = Company::factory()->create();
 
     syncCompany($company, ['users' => [
-        ['name' => 'Jane', 'email' => 'jane@acme.test'],
+        ['name' => 'Jane', 'mobile_number' => '+27821234567', 'email' => 'jane@acme.test'],
     ]], 'prov-key')
         ->assertOk()
         ->assertJsonPath('users.created', 1);
@@ -211,10 +250,10 @@ it('rejects an invalid sync token', function () {
     syncCompany($company, ['users' => []], 'nope')->assertUnauthorized();
 });
 
-it('validates that each user has an email', function () {
+it('validates that each user has a mobile_number', function () {
     $company = Company::factory()->create();
 
     syncCompany($company, ['users' => [
-        ['name' => 'No Email'],
+        ['name' => 'No Mobile', 'email' => 'nomobile@acme.test'],
     ]])->assertUnprocessable();
 });

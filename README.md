@@ -121,14 +121,14 @@ Authorization: Bearer {company_hmac_secret | provisioning_key}
 
 {
   "users": [
-    { "external_id": "u-1", "name": "Jane Doe", "email": "jane@acme.test", "phone": "+27821234567", "is_company_admin": true },
-    { "external_id": "u-2", "name": "John Roe", "email": "john@acme.test" }
+    { "external_id": "u-1", "name": "Jane Doe", "mobile_number": "+27821234567", "email": "jane@acme.test", "is_company_admin": true },
+    { "external_id": "u-2", "name": "John Roe", "mobile_number": "+27829876543" }
   ],
   "groups": [
     {
       "external_id": "g-1",
       "name": "Engineering",
-      "members": [ { "external_id": "u-1" }, { "email": "john@acme.test" } ]
+      "members": [ { "external_id": "u-1" }, { "mobile_number": "+27829876543" } ]
     }
   ],
   "delete_missing_users": false,
@@ -136,8 +136,8 @@ Authorization: Bearer {company_hmac_secret | provisioning_key}
 }
 ```
 
-- Users are matched (within the company) by `external_id`, then `email`, then
-  `phone`; unmatched records create a new platform user. Users are processed
+- Users are matched (within the company) by `external_id`, then `mobile_number`,
+  then `email`; unmatched records create a new platform user. Users are processed
   before groups, so newly synced users can be referenced as group members in
   the same request.
 - A group's `members` list becomes its authoritative membership. Members must

@@ -99,6 +99,42 @@ it('allows a company admin to approve a registration so the user can log in with
         ->assertJsonPath('user.email', 'jane@example.com');
 });
 
+it('associates an existing user when approving a registration instead of creating a duplicate', function () {
+    $companyA = Company::factory()->create();
+    $companyB = Company::factory()->create();
+    $existing = User::factory()->forCompany($companyA)->create([
+        'name' => 'Original Name',
+        'email' => 'jane@example.com',
+        'phone' => '+27821234567',
+        'password' => 'existing-pass',
+    ]);
+    $admin = User::factory()->forCompany($companyB, true)->create(['phone' => '+27821111111']);
+    $issued = UserApiToken::issue($admin, 'test');
+
+    $registration = UserRegistration::factory()->for($companyB)->create([
+        'name' => 'Jane From Registration',
+        'email' => 'jane@example.com',
+        'phone' => '+27821234567',
+        'password' => bcrypt('registration-pass'),
+    ]);
+
+    test()->postJson(route('api.v1.registrations.approve', [$companyB, $registration]), [], [
+        'Authorization' => 'Bearer '.$issued['plain_text_token'],
+    ])
+        ->assertSuccessful()
+        ->assertJsonPath('data.status', 'approved');
+
+    expect(User::query()->where('email', 'jane@example.com')->count())->toBe(1)
+        ->and($existing->fresh()->name)->toBe('Original Name')
+        ->and($existing->fresh()->belongsToCompany($companyB))->toBeTrue()
+        ->and($registration->fresh()->user_id)->toBe($existing->id);
+
+    test()->postJson(route('api.v1.auth.login'), [
+        'phone' => '+27821234567',
+        'password' => 'existing-pass',
+    ])->assertSuccessful();
+});
+
 it('forbids regular users from approving registrations', function () {
     $company = Company::factory()->create();
     $user = User::factory()->forCompany($company)->create();

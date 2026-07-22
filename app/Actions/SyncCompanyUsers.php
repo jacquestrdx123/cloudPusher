@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\CompanyUser;
 use App\Models\User;
 use App\Support\PhoneNumber;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -16,12 +17,13 @@ class SyncCompanyUsers
      * Declaratively reconcile a company's user membership against the payload.
      *
      * Users are matched (within the company) by their pivot external_id first,
-     * then by global email, then by global phone. Unmatched records create a
-     * new platform user. When $deleteMissing is true, members not present in
-     * the payload are detached from the company (the global user is preserved).
+     * then by global mobile number, then by global email. Unmatched records
+     * create a new platform user. When $deleteMissing is true, members not
+     * present in the payload are detached from the company (the global user is
+     * preserved).
      *
      * @param  array<int, array<string, mixed>>  $users
-     * @return array{created: int, updated: int, unchanged: int, removed: int, skipped: array<int, array{email: string|null, external_id: string|null, reason: string}>}
+     * @return array{created: int, updated: int, unchanged: int, removed: int, skipped: array<int, array{email: string|null, mobile_number: string|null, external_id: string|null, reason: string}>}
      */
     public function handle(Company $company, array $users, bool $deleteMissing = false): array
     {
@@ -32,37 +34,60 @@ class SyncCompanyUsers
 
         DB::transaction(function () use ($company, $users, $deleteMissing, &$summary, &$matchedIds): void {
             foreach ($users as $record) {
-                $email = strtolower(trim((string) ($record['email'] ?? '')));
+                $emailRaw = strtolower(trim((string) ($record['email'] ?? '')));
+                $emailProvided = $emailRaw !== '';
                 $externalId = isset($record['external_id']) && filled($record['external_id'])
                     ? (string) $record['external_id']
                     : null;
-                $phone = isset($record['phone']) && filled($record['phone'])
-                    ? PhoneNumber::normalize((string) $record['phone'])
-                    : null;
+                $mobileNumber = $this->resolveMobileNumber($record);
 
-                if ($email === '') {
+                if ($mobileNumber === null) {
                     $summary['skipped'][] = [
-                        'email' => null,
+                        'email' => $emailProvided ? $emailRaw : null,
+                        'mobile_number' => null,
                         'external_id' => $externalId,
-                        'reason' => 'An email address is required.',
+                        'reason' => 'A valid mobile_number is required.',
                     ];
 
                     continue;
                 }
 
-                $user = $this->matchUser($company, $externalId, $email, $phone);
+                $email = $emailProvided ? $emailRaw : $this->placeholderEmail($mobileNumber);
+
+                $user = $this->matchUser(
+                    $company,
+                    $externalId,
+                    $mobileNumber,
+                    $emailProvided ? $emailRaw : null,
+                );
 
                 $isNewUser = $user === null;
 
                 if ($isNewUser) {
-                    $user = User::query()->create([
-                        'name' => (string) ($record['name'] ?? $email),
-                        'email' => $email,
-                        'phone' => $phone,
-                        'locale' => $record['locale'] ?? null,
-                        'password' => Hash::make(Str::random(40)),
-                        'email_verified_at' => now(),
-                    ]);
+                    try {
+                        $user = User::query()->create([
+                            'name' => (string) ($record['name'] ?? $mobileNumber),
+                            'email' => $email,
+                            'phone' => $mobileNumber,
+                            'locale' => $record['locale'] ?? null,
+                            'password' => Hash::make(Str::random(40)),
+                            'email_verified_at' => now(),
+                        ]);
+                    } catch (UniqueConstraintViolationException $exception) {
+                        // Race / missed match: fall back to associating the existing user.
+                        $user = $this->matchUser(
+                            $company,
+                            $externalId,
+                            $mobileNumber,
+                            $emailProvided ? $emailRaw : null,
+                        );
+
+                        if (! $user instanceof User) {
+                            throw $exception;
+                        }
+
+                        $isNewUser = false;
+                    }
                 }
 
                 $matchedIds[] = $user->id;
@@ -73,7 +98,7 @@ class SyncCompanyUsers
                 $profileChanged = false;
 
                 if (! $isNewUser && $ownsProfile) {
-                    $profileChanged = $this->applyProfile($user, $record, $email, $phone, $externalId, $summary);
+                    $profileChanged = $this->applyProfile($user, $record, $email, $mobileNumber, $externalId, $summary);
                 }
 
                 $pivotChanged = $this->syncPivot($company, $user->id, $record, $externalId, $wasMember);
@@ -95,7 +120,34 @@ class SyncCompanyUsers
         return $summary;
     }
 
-    private function matchUser(Company $company, ?string $externalId, string $email, ?string $phone): ?User
+    /**
+     * @param  array<string, mixed>  $record
+     */
+    private function resolveMobileNumber(array $record): ?string
+    {
+        $raw = $record['mobile_number'] ?? $record['phone'] ?? null;
+
+        if (! is_string($raw) && ! is_numeric($raw)) {
+            return null;
+        }
+
+        if (! filled($raw)) {
+            return null;
+        }
+
+        $normalized = PhoneNumber::normalize((string) $raw);
+
+        return $normalized !== '' ? $normalized : null;
+    }
+
+    private function placeholderEmail(string $mobileNumber): string
+    {
+        $digits = preg_replace('/\D+/', '', $mobileNumber) ?: Str::lower(Str::random(12));
+
+        return "mobile+{$digits}@users.local";
+    }
+
+    private function matchUser(Company $company, ?string $externalId, string $mobileNumber, ?string $email): ?User
     {
         if ($externalId !== null) {
             $byExternal = $company->users()->wherePivot('external_id', $externalId)->first();
@@ -105,24 +157,24 @@ class SyncCompanyUsers
             }
         }
 
-        $byEmail = User::query()->where('email', $email)->first();
+        $byMobile = User::query()->where('phone', $mobileNumber)->first();
 
-        if ($byEmail instanceof User) {
-            return $byEmail;
+        if ($byMobile instanceof User) {
+            return $byMobile;
         }
 
-        if ($phone !== null) {
-            return User::query()->where('phone', $phone)->first();
+        if ($email === null) {
+            return null;
         }
 
-        return null;
+        return User::query()->where('email', $email)->first();
     }
 
     /**
      * @param  array<string, mixed>  $record
-     * @param  array{created: int, updated: int, unchanged: int, removed: int, skipped: array<int, array{email: string|null, external_id: string|null, reason: string}>}  $summary
+     * @param  array{created: int, updated: int, unchanged: int, removed: int, skipped: array<int, array{email: string|null, mobile_number: string|null, external_id: string|null, reason: string}>}  $summary
      */
-    private function applyProfile(User $user, array $record, string $email, ?string $phone, ?string $externalId, array &$summary): bool
+    private function applyProfile(User $user, array $record, string $email, string $mobileNumber, ?string $externalId, array &$summary): bool
     {
         if (array_key_exists('name', $record) && filled($record['name']) && $user->name !== $record['name']) {
             $user->name = (string) $record['name'];
@@ -132,27 +184,31 @@ class SyncCompanyUsers
             $user->locale = $record['locale'];
         }
 
-        if ($user->email !== $email) {
+        if ($user->phone !== $mobileNumber) {
+            if (User::query()->where('phone', $mobileNumber)->whereKeyNot($user->id)->exists()) {
+                $summary['skipped'][] = [
+                    'email' => $email,
+                    'mobile_number' => $mobileNumber,
+                    'external_id' => $externalId,
+                    'reason' => 'Mobile number already belongs to another user; profile mobile left unchanged.',
+                ];
+            } else {
+                $user->phone = $mobileNumber;
+            }
+        }
+
+        $emailProvided = array_key_exists('email', $record) && filled($record['email']);
+
+        if ($emailProvided && $user->email !== $email) {
             if (User::query()->where('email', $email)->whereKeyNot($user->id)->exists()) {
                 $summary['skipped'][] = [
                     'email' => $email,
+                    'mobile_number' => $mobileNumber,
                     'external_id' => $externalId,
                     'reason' => 'Email already belongs to another user; profile email left unchanged.',
                 ];
             } else {
                 $user->email = $email;
-            }
-        }
-
-        if ($phone !== null && $user->phone !== $phone) {
-            if (User::query()->where('phone', $phone)->whereKeyNot($user->id)->exists()) {
-                $summary['skipped'][] = [
-                    'email' => $email,
-                    'external_id' => $externalId,
-                    'reason' => 'Phone already belongs to another user; profile phone left unchanged.',
-                ];
-            } else {
-                $user->phone = $phone;
             }
         }
 
