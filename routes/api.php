@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
-use App\Http\Controllers\Api\V1\CompanyProvisioningController;
 use App\Http\Controllers\Api\V1\CompanySyncController;
 use App\Http\Controllers\Api\V1\DeviceTokenController;
 use App\Http\Controllers\Api\V1\InboxController;
@@ -15,12 +14,8 @@ Route::post('webhooks/{company:slug}/push', [WebhookController::class, 'push'])
     ->middleware(['webhook.signature', 'throttle:push-webhook'])
     ->name('webhooks.push');
 
-Route::post('v1/companies', [CompanyProvisioningController::class, 'store'])
-    ->middleware(['provisioning.token', 'throttle:push-api'])
-    ->name('api.v1.companies.store');
-
 Route::put('v1/{company:slug}/sync', [CompanySyncController::class, 'sync'])
-    ->middleware(['company.sync.token', 'throttle:push-api'])
+    ->middleware(['company.token', 'throttle:push-api'])
     ->name('api.v1.sync');
 
 Route::post('v1/auth/login', [AuthController::class, 'login'])

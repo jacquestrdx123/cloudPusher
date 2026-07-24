@@ -7,11 +7,11 @@
 
 This document covers the **system-to-system** path only:
 
-1. Provision a company (tenant)
+1. Obtain a company (tenant) created by a cloudPusher Global Admin
 2. Sync users and groups from your system
 3. Send push / mail / SMS notifications to those users
 
-It does **not** cover the mobile app login / self-registration flows (those use personal user tokens). For machine integration you must use environment / company secrets — never end-user tokens.
+It does **not** cover the mobile app login / self-registration flows (those use personal user tokens). For machine integration you must use the company's `hmac_secret` — never end-user tokens.
 
 ---
 
@@ -20,7 +20,7 @@ It does **not** cover the mobile app login / self-registration flows (those use 
 1. [Architecture overview](#1-architecture-overview)
 2. [Authentication](#2-authentication)
 3. [Prerequisites](#3-prerequisites)
-4. [Step 1 — Provision a company](#4-step-1--provision-a-company)
+4. [Step 1 — Obtain a company](#4-step-1--obtain-a-company)
 5. [Step 2 — Sync users and groups](#5-step-2--sync-users-and-groups)
 6. [Step 3 — Send notifications](#6-step-3--send-notifications)
 7. [Optional — HMAC webhook send path](#7-optional--hmac-webhook-send-path)
@@ -41,9 +41,10 @@ It does **not** cover the mobile app login / self-registration flows (those use 
 │  Your system        │         │  cloudPusher             │
 │  (ERP / CRM / LMS)  │         │  (push-service)          │
 │                     │         │                          │
-│  1. Provision       │──POST──▶│  Company + hmac_secret   │
-│  2. Sync directory  │──PUT───▶│  Users + Groups          │
-│  3. Send notify     │──POST──▶│  Queue → FCM/APNs/Mail   │
+│  (company created   │         │  Global Admin → Company  │
+│   out of band)      │         │  + hmac_secret in DB     │
+│  1. Sync directory  │──PUT───▶│  Users + Groups          │
+│  2. Send notify     │──POST──▶│  Queue → FCM/APNs/Mail   │
 └─────────────────────┘         └───────────┬──────────────┘
                                             │
                                             ▼
@@ -56,7 +57,7 @@ It does **not** cover the mobile app login / self-registration flows (those use 
 
 | Concern | Who owns it |
 |---------|-------------|
-| Creating the company tenant | Your system → cloudPusher provisioning API |
+| Creating the company tenant | cloudPusher Global Admin (Filament) |
 | Keeping users/groups in sync | Your system → cloudPusher sync API |
 | Registering FCM/APNs device tokens | End-user app (cloudPusherApp), not your backend |
 | Deciding *when* to notify | Your system |
@@ -68,36 +69,26 @@ Syncing a user into cloudPusher does **not** by itself make push delivery work. 
 
 ## 2. Authentication
 
-cloudPusher uses **Bearer tokens**. For system-to-system work there are two secrets — neither is a logged-in user token.
+cloudPusher uses **Bearer tokens**. For system-to-system work there is one secret per company — not a logged-in user token and not a shared platform env key.
 
-### 2.1 Platform provisioning key (env)
-
-| Item | Value |
-|------|--------|
-| Env var on cloudPusher | `PUSH_PROVISIONING_KEY` |
-| Header | `Authorization: Bearer {PUSH_PROVISIONING_KEY}` |
-| Used for | `POST /api/v1/companies` (required); `PUT /api/v1/{slug}/sync` (accepted) |
-| Who holds it | Your integrating system + cloudPusher ops only |
-
-If `PUSH_PROVISIONING_KEY` is empty on the server, company provisioning responds with **404** (endpoint hidden / disabled).
-
-### 2.2 Company HMAC secret
+### 2.1 Company HMAC secret
 
 | Item | Value |
 |------|--------|
-| Issued when | Company is provisioned (returned once as `hmac_secret`) |
+| Issued when | A Global Admin creates the company in Filament (auto-generated, stored on `companies.hmac_secret`) |
 | Header | `Authorization: Bearer {hmac_secret}` |
 | Used for | Sync, send notifications, list/show notifications, device-token ops (company style), inbox (company style) |
 | Also used for | Signing webhook body (`X-Signature`) |
 
-Store the `hmac_secret` securely in your system against the company record. Prefer the provisioning key for sync if you manage many companies from one integration service; use the company secret for day-to-day notification sending scoped to one tenant.
+Copy the **Company API token / HMAC secret** and **slug** from Filament into your secrets store. Use that secret for every company-scoped API call.
 
-### 2.3 What not to use
+### 2.2 What not to use
 
 | Token type | Use for system integration? |
 |------------|----------------------------|
 | User API token (from mobile login) | **No** |
 | Filament admin session cookie | **No** |
+| Shared platform / env provisioning key | **No** (removed) |
 | Random / guessed company secret | **No** |
 
 ---
@@ -106,90 +97,30 @@ Store the `hmac_secret` securely in your system against the company record. Pref
 
 On the cloudPusher side (ops):
 
-1. `PUSH_PROVISIONING_KEY` set to a long random secret shared with your system.
+1. A Global Admin creates the company tenant in Filament and shares `slug` + `hmac_secret` with the integrating team.
 2. Horizon running (`php artisan horizon`) with Redis — without this, notifications stay queued / undelivered.
 3. Channel drivers configured as needed: FCM (`PUSH_FCM_ENABLED`), APNs, mail, SMS.
-4. Company slug uniqueness reserved for your tenant (you choose the slug at provision time).
 
 On your system:
 
-1. Secure storage for `PUSH_PROVISIONING_KEY` and each company's `hmac_secret`.
+1. Secure storage for each company's `slug` and `hmac_secret`.
 2. A stable **external ID** for every user and group you sync (recommended — makes rematches and email changes safe).
 3. An HTTPS client that can send JSON and read status codes.
 
 ---
 
-## 4. Step 1 — Provision a company
+## 4. Step 1 — Obtain a company
 
-Create (or re-fetch) a tenant. This is **idempotent** on `slug`.
+Companies are **not** created via the public API. A cloudPusher **Global Admin** creates the tenant in Filament (`/admin/companies/create` or tenant registration).
 
-### Request
+On create, cloudPusher:
 
-```http
-POST /api/v1/companies
-Authorization: Bearer {PUSH_PROVISIONING_KEY}
-Content-Type: application/json
-Accept: application/json
+- Generates a unique `slug` from the name (or uses the slug the admin entered)
+- Auto-generates a 48-character `hmac_secret` (shown as “Company API token / HMAC secret”)
 
-{
-  "name": "Acme Corp",
-  "slug": "acme-corp",
-  "default_channels": ["push", "mail"],
-  "is_active": true
-}
-```
+**Persist `slug` and `hmac_secret` in your system immediately.** You need them for every subsequent company-scoped call. The admin can regenerate the secret later from the company form if it is rotated.
 
-| Field | Required | Notes |
-|-------|----------|--------|
-| `name` | Yes | Display name |
-| `slug` | No | URL key; auto-generated from name if omitted. Use a stable slug from *your* system. |
-| `default_channels` | No | `push`, `mail`, `sms`. Used when a send omits `channels`. |
-| `is_active` | No | Defaults to `true`. Inactive companies reject API calls with 404. |
-
-### Success responses
-
-- **201 Created** — new company; `"created": true`
-- **200 OK** — slug already existed; company updated; `"created": false`
-
-```json
-{
-  "data": {
-    "id": 1,
-    "name": "Acme Corp",
-    "slug": "acme-corp",
-    "hmac_secret": "…………………………",
-    "default_channels": ["push", "mail"],
-    "is_active": true,
-    "created_at": "2026-07-22T05:00:00.000000Z"
-  },
-  "created": true
-}
-```
-
-**Persist `data.hmac_secret` and `data.slug` in your system immediately.** You need them for every subsequent company-scoped call.
-
-### Failure responses
-
-| Status | Meaning |
-|--------|---------|
-| 401 | Wrong / missing provisioning key |
-| 404 | Provisioning disabled (`PUSH_PROVISIONING_KEY` empty) |
-| 422 | Validation failed (e.g. missing `name`) |
-| 429 | Rate limited |
-
-### curl example
-
-```bash
-curl -sS -X POST "$BASE_URL/api/v1/companies" \
-  -H "Authorization: Bearer $PUSH_PROVISIONING_KEY" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{
-    "name": "Acme Corp",
-    "slug": "acme-corp",
-    "default_channels": ["push", "mail"]
-  }'
-```
+There is no `POST /api/v1/companies` endpoint.
 
 ---
 
@@ -201,7 +132,7 @@ Declarative, idempotent reconciliation of the company directory.
 
 ```http
 PUT /api/v1/{company_slug}/sync
-Authorization: Bearer {hmac_secret | PUSH_PROVISIONING_KEY}
+Authorization: Bearer {hmac_secret}
 Content-Type: application/json
 Accept: application/json
 ```
@@ -210,10 +141,7 @@ You may send `users`, `groups`, or both. Omit a key entirely to leave that side 
 
 ### Auth for sync
 
-Either token works:
-
-- Company `hmac_secret` — scoped to that company
-- `PUSH_PROVISIONING_KEY` — platform key; can sync any company
+Only the company's `hmac_secret` is accepted (scoped to that company).
 
 ### User records
 
@@ -377,7 +305,7 @@ Content-Type: application/json
 Accept: application/json
 ```
 
-**Note:** This endpoint requires the **company HMAC secret**, not the provisioning key.
+**Note:** This endpoint requires the **company HMAC secret**.
 
 ### Minimal example — single user by email
 
@@ -425,7 +353,7 @@ Prefer targeting by **email** (stable across your sync) or by cloudPusher numeri
 | `title` | Yes | Max 255 |
 | `body` | No | Max 2000 |
 | `channels` | No | Subset of `push`, `mail`, `sms`. Falls back to company `default_channels` |
-| `data` | No | Arbitrary JSON object; delivered to clients as notification `payload` |
+| `data` | No | Arbitrary JSON object; delivered to clients as notification `payload`. Reserved keys: `url` (`https://…`), `url_label` (button text, max 100) |
 | `image_url` | No | Must be `https://…` — rich push image |
 | `sound` | No | e.g. `default` |
 | `category` | No | iOS category id |
@@ -447,7 +375,9 @@ Prefer targeting by **email** (stable across your sync) or by cloudPusher numeri
   "category": "RICH_MESSAGE",
   "android_channel_id": "rich_messages_v1",
   "data": {
-    "url": "/inbox/123",
+    "url": "https://wispmon-e0iitbod.on-forge.com/device/1123",
+    "url_label": "View device",
+    "type": "power_down",
     "entity": "ticket",
     "entity_id": "123"
   },
@@ -455,6 +385,7 @@ Prefer targeting by **email** (stable across your sync) or by cloudPusher numeri
 }
 ```
 
+The receiver app opens the notification in-app first. When `data.url` is an `https://` URL, the detail screen shows a button labeled `data.url_label` (fallback **Open link**) that opens the external URL.
 ### Success response — 202
 
 ```json
@@ -505,7 +436,7 @@ curl -sS -X POST "$BASE_URL/api/v1/acme-corp/notifications" \
     "target": { "type": "user", "email": "jane@acme.test" },
     "title": "Server down",
     "body": "Investigate production",
-    "data": { "severity": "critical", "url": "/incidents/1" },
+    "data": { "severity": "critical", "url": "https://example.com/incidents/1", "url_label": "View incident" },
     "channels": ["push", "mail"]
   }'
 ```
@@ -595,7 +526,7 @@ Use this for support tooling or to reconcile “did Jane get the push?” in you
 |--------|---------------|--------|
 | 200 / 201 / 202 | Success | — |
 | 401 | Bad Bearer / bad signature | No (fix secret) |
-| 404 | Unknown slug, inactive company, or provisioning disabled | No |
+| 404 | Unknown slug or inactive company | No |
 | 422 | Validation / unknown target | No (fix payload) |
 | 429 | Rate limited | Yes, with backoff |
 | 5xx | Server / worker infra | Yes, with backoff |
@@ -608,7 +539,6 @@ Configured on cloudPusher via `PUSH_RATE_LIMIT` (default **120 requests/minute**
 
 | Operation | Idempotent? | How to use safely |
 |-----------|-------------|-------------------|
-| Provision company | Yes on `slug` | Safe to retry; may return 200 instead of 201 |
 | Sync directory | Yes for same payload | Safe to retry; counts reflect delta |
 | Send notification | **No** | Retrying creates a **second** notification. Deduplicate in your system (store outbound event id → cloudPusher notification id) before re-POSTing |
 
@@ -619,13 +549,10 @@ Configured on cloudPusher via `PUSH_RATE_LIMIT` (default **120 requests/minute**
 ### 10.1 Credentials store
 
 ```
-integration_settings:
-  push_provisioning_key   # shared secret for all tenants OR per-env
-
 companies:
   your_tenant_id → {
     cloudpusher_slug,
-    cloudpusher_hmac_secret,
+    cloudpusher_hmac_secret,   # from Filament Global Admin
     last_synced_at
   }
 ```
@@ -682,17 +609,11 @@ final class CloudPusherClient
 {
     public function __construct(
         private string $baseUrl,
-        private string $provisioningKey,
     ) {}
 
-    public function provisionCompany(array $payload): array
+    public function sync(string $slug, array $payload, string $hmacSecret): array
     {
-        return $this->request('POST', '/api/v1/companies', $payload, $this->provisioningKey);
-    }
-
-    public function sync(string $slug, array $payload, string $token): array
-    {
-        return $this->request('PUT', "/api/v1/{$slug}/sync", $payload, $token);
+        return $this->request('PUT', "/api/v1/{$slug}/sync", $payload, $hmacSecret);
     }
 
     public function notify(string $slug, array $payload, string $hmacSecret): array
@@ -721,18 +642,12 @@ final class CloudPusherClient
 Assume:
 
 - `BASE_URL=https://push-service.test`
-- `PUSH_PROVISIONING_KEY=shared-platform-secret`
+- Company `acme-corp` already created by a Global Admin
+- `$HMAC` = that company's Filament “Company API token / HMAC secret”
 
-### A. Create the tenant (once)
+### A. Confirm credentials (once)
 
-```bash
-POST /api/v1/companies
-Authorization: Bearer shared-platform-secret
-
-{ "name": "Acme Corp", "slug": "acme-corp", "default_channels": ["push", "mail"] }
-```
-
-Save `hmac_secret` → `$HMAC`.
+Obtain `slug` and `hmac_secret` from the Global Admin (Filament Companies resource). There is no API to create the company.
 
 ### B. Sync the directory
 
@@ -771,7 +686,7 @@ Authorization: Bearer $HMAC
   "target": { "type": "group", "slug": "billing" },
   "title": "Payment received",
   "body": "Invoice #889 was paid.",
-  "data": { "invoice_id": "889", "url": "/invoices/889" },
+  "data": { "invoice_id": "889", "url": "https://example.com/invoices/889", "url_label": "View invoice" },
   "channels": ["push", "mail"]
 }
 ```
@@ -861,6 +776,7 @@ Request:
   category?: string, max 64
   android_channel_id?: string, max 64
   data?: object
+    # reserved: data.url (https URL), data.url_label (button label)
   channels?: (push|mail|sms)[]
   scheduled_at?: future datetime
 
@@ -870,13 +786,12 @@ Response 202:
 
 ### Auth summary matrix
 
-| Endpoint | Provisioning key | Company HMAC | User token |
-|----------|:----------------:|:------------:|:----------:|
-| `POST /api/v1/companies` | ✅ required | ❌ | ❌ |
-| `PUT /api/v1/{slug}/sync` | ✅ | ✅ | ❌ |
-| `POST /api/v1/{slug}/notifications` | ❌ | ✅ required | ❌ |
-| `GET /api/v1/{slug}/notifications` | ❌ | ✅ | ❌ |
-| `POST /api/webhooks/{slug}/push` | ❌ | ✅ via `X-Signature` | ❌ |
+| Endpoint | Company HMAC | User token |
+|----------|:------------:|:----------:|
+| `PUT /api/v1/{slug}/sync` | ✅ required | ❌ |
+| `POST /api/v1/{slug}/notifications` | ✅ required | ❌ |
+| `GET /api/v1/{slug}/notifications` | ✅ | ❌ |
+| `POST /api/webhooks/{slug}/push` | ✅ via `X-Signature` | ❌ |
 
 ---
 
@@ -884,8 +799,7 @@ Response 202:
 
 Use this when wiring another product:
 
-- [ ] Obtain `PUSH_PROVISIONING_KEY` from cloudPusher ops; store in your secrets manager
-- [ ] Implement `POST /companies` and persist `slug` + `hmac_secret`
+- [ ] Obtain company `slug` + `hmac_secret` from a cloudPusher Global Admin; store in your secrets manager
 - [ ] Assign stable `external_id` values for every user and group you sync
 - [ ] Implement `PUT /{slug}/sync` for users (event-driven upserts)
 - [ ] Implement group sync with full `members` arrays when membership changes
@@ -897,7 +811,7 @@ Use this when wiring another product:
 - [ ] Confirm Horizon is running in the target environment before go-live testing
 - [ ] Confirm at least one test user has a registered device token (via the receiver app) before expecting push success
 - [ ] Optionally poll `GET /notifications/{id}` for support dashboards
-- [ ] Document which team owns rotating `PUSH_PROVISIONING_KEY` and per-company secrets
+- [ ] Document which team owns rotating per-company secrets
 
 ---
 
@@ -907,7 +821,7 @@ Use this when wiring another product:
 |-------------|---------|
 | Sync creates push-ready devices | No — devices come from the mobile/web app |
 | Sync passwords enable mobile login | Synced users get a random password; mobile login needs the registration/approval flow or a password you set another way |
-| Provisioning key can send notifications | No — send uses company HMAC only |
+| Your system can create companies via API | No — only a Global Admin creates companies in Filament |
 | `external_id` can be used as notification target | No — target by email, cloudPusher user id, or group slug/id |
 | Retrying a send is safe | No — creates duplicates; dedupe on your side |
 | Inactive company still accepts traffic | No — inactive → 404 |
@@ -916,14 +830,13 @@ Use this when wiring another product:
 
 ## Appendix A — Local Postman
 
-The repo includes `postman/Push Service API.postman_collection.json` for device tokens, notifications, and webhooks. **Company provisioning and directory sync are not in that collection yet**; use this document (or add those requests yourself) with variables:
+The repo includes `postman/Push Service API.postman_collection.json` for device tokens, notifications, and webhooks. **Directory sync is not in that collection yet**; use this document (or add those requests yourself) with variables:
 
 | Variable | Source |
 |----------|--------|
 | `baseUrl` | e.g. `https://push-service.test` |
-| `provisioningKey` | `PUSH_PROVISIONING_KEY` |
-| `companySlug` | From provision response |
-| `companyToken` | `hmac_secret` from provision response |
+| `companySlug` | From Filament company record |
+| `companyToken` | `hmac_secret` from Filament |
 
 ---
 
@@ -941,13 +854,11 @@ The repo includes `postman/Push Service API.postman_collection.json` for device 
 ## Appendix C — Quick reference cheat sheet
 
 ```
-# 1. Provision
-POST /api/v1/companies
-Authorization: Bearer $PUSH_PROVISIONING_KEY
+# 1. Company created by Global Admin in Filament → copy slug + hmac_secret
 
 # 2. Sync
 PUT  /api/v1/{slug}/sync
-Authorization: Bearer $HMAC_OR_PROVISIONING_KEY
+Authorization: Bearer $HMAC
 
 # 3. Notify
 POST /api/v1/{slug}/notifications

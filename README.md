@@ -89,35 +89,15 @@ GET /api/v1/{company_slug}/notifications?per_page=25
 GET /api/v1/{company_slug}/notifications/{id}
 ```
 
-### Directory sync (provision company + sync users/groups)
+### Directory sync (users/groups)
 
-An upstream system can provision a company and keep its users and user groups
-in sync. Company provisioning uses a platform-level provisioning key
-(`PUSH_PROVISIONING_KEY`); leave it empty to disable the endpoint.
-
-**1. Create a company** (returns its `hmac_secret`, used for later calls):
-
-```http
-POST /api/v1/companies
-Authorization: Bearer {provisioning_key}
-
-{
-  "name": "Acme Corp",
-  "slug": "acme-corp",            // optional; generated from name if omitted
-  "default_channels": ["push", "mail"],
-  "is_active": true
-}
-```
-
-Returns `201 Created` (or `200 OK` with `"created": false` when the slug
-already exists — provisioning is idempotent).
-
-**2. Sync users and groups** — declarative and idempotent. Authenticate with
-the company's `hmac_secret` **or** the provisioning key:
+A Global Admin creates the company in Filament (which stores a per-company
+`hmac_secret`). An upstream system then keeps that company's users and user
+groups in sync using the company secret:
 
 ```http
 PUT /api/v1/{company_slug}/sync
-Authorization: Bearer {company_hmac_secret | provisioning_key}
+Authorization: Bearer {company_hmac_secret}
 
 {
   "users": [

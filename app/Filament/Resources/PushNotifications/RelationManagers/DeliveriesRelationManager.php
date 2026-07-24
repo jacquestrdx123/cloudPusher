@@ -24,6 +24,7 @@ class DeliveriesRelationManager extends RelationManager
                 TextColumn::make('status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
+                        'delivered' => 'info',
                         'sent' => 'success',
                         'failed' => 'danger',
                         default => 'gray',
@@ -32,6 +33,9 @@ class DeliveriesRelationManager extends RelationManager
                     ->limit(60)
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('sent_at')
+                    ->dateTime()
+                    ->placeholder('—'),
+                TextColumn::make('delivered_at')
                     ->dateTime()
                     ->placeholder('—'),
                 TextColumn::make('created_at')

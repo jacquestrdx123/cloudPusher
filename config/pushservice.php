@@ -114,20 +114,4 @@ return [
         'token_ttl_days' => (int) env('PUSH_USER_TOKEN_TTL_DAYS', 90),
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Directory Sync / Provisioning
-    |--------------------------------------------------------------------------
-    |
-    | Machine-to-machine provisioning key used by an upstream system to create
-    | companies and sync their users and groups. Leave the key empty to disable
-    | the provisioning endpoint entirely. The key also authenticates the sync
-    | endpoint for any company (in addition to that company's own HMAC secret).
-    |
-    */
-
-    'sync' => [
-        'provisioning_key' => env('PUSH_PROVISIONING_KEY'),
-    ],
-
 ];

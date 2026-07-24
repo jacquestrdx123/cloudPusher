@@ -26,6 +26,7 @@ class NotificationDeliveryFactory extends Factory
             'status' => NotificationDelivery::STATUS_PENDING,
             'error' => null,
             'sent_at' => null,
+            'delivered_at' => null,
         ];
     }
 
@@ -35,6 +36,17 @@ class NotificationDeliveryFactory extends Factory
             'status' => NotificationDelivery::STATUS_SENT,
             'error' => null,
             'sent_at' => now(),
+            'delivered_at' => null,
+        ]);
+    }
+
+    public function delivered(): static
+    {
+        return $this->state(fn (): array => [
+            'status' => NotificationDelivery::STATUS_DELIVERED,
+            'error' => null,
+            'sent_at' => now()->subMinute(),
+            'delivered_at' => now(),
         ]);
     }
 
@@ -44,6 +56,7 @@ class NotificationDeliveryFactory extends Factory
             'status' => NotificationDelivery::STATUS_FAILED,
             'error' => $error,
             'sent_at' => null,
+            'delivered_at' => null,
         ]);
     }
 }

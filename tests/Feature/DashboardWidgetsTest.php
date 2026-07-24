@@ -41,8 +41,13 @@ it('renders delivery overview stats scoped to the current tenant', function () {
         'channel' => 'apns',
         'created_at' => now()->subDay(),
     ]);
-    NotificationDelivery::factory()->for($notification)->for($member)->failed()->create([
+    NotificationDelivery::factory()->for($notification)->for($member)->delivered()->create([
         'channel' => 'fcm',
+        'created_at' => now()->subDay(),
+        'delivered_at' => now()->subDay(),
+    ]);
+    NotificationDelivery::factory()->for($notification)->for($member)->failed()->create([
+        'channel' => 'mail',
         'created_at' => now()->subDay(),
     ]);
     NotificationDelivery::factory()
@@ -57,6 +62,7 @@ it('renders delivery overview stats scoped to the current tenant', function () {
     Livewire::test(DeliveryStatsOverview::class)
         ->assertOk()
         ->assertSee('Delivery overview')
+        ->assertSee('Opened in app')
         ->assertSee('2')
         ->assertSee('1')
         ->assertSee('Device tokens');

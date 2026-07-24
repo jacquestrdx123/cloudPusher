@@ -15,7 +15,7 @@ class DeliveriesChart extends ChartWidget
 
     protected ?string $heading = 'Deliveries (14 days)';
 
-    protected ?string $description = 'Sent vs failed delivery attempts for this company.';
+    protected ?string $description = 'Sent, opened-in-app, and failed delivery attempts for this company.';
 
     protected ?string $maxHeight = '280px';
 
@@ -43,9 +43,11 @@ class DeliveriesChart extends ChartWidget
         $from = now()->subDays(13)->startOfDay();
         $labels = [];
         $sent = [];
+        $delivered = [];
         $failed = [];
 
-        $sentByDay = $this->dailyStatusCounts($tenantId, NotificationDelivery::STATUS_SENT, $from);
+        $sentByDay = $this->dailySuccessCounts($tenantId, $from);
+        $deliveredByDay = $this->dailyStatusCounts($tenantId, NotificationDelivery::STATUS_DELIVERED, $from, 'delivered_at');
         $failedByDay = $this->dailyStatusCounts($tenantId, NotificationDelivery::STATUS_FAILED, $from);
 
         for ($daysAgo = 13; $daysAgo >= 0; $daysAgo--) {
@@ -53,6 +55,7 @@ class DeliveriesChart extends ChartWidget
             $key = $day->toDateString();
             $labels[] = $day->format('M j');
             $sent[] = (int) ($sentByDay[$key] ?? 0);
+            $delivered[] = (int) ($deliveredByDay[$key] ?? 0);
             $failed[] = (int) ($failedByDay[$key] ?? 0);
         }
 
@@ -63,6 +66,14 @@ class DeliveriesChart extends ChartWidget
                     'data' => $sent,
                     'borderColor' => 'rgb(22, 163, 74)',
                     'backgroundColor' => 'rgba(22, 163, 74, 0.15)',
+                    'fill' => true,
+                    'tension' => 0.35,
+                ],
+                [
+                    'label' => 'Opened',
+                    'data' => $delivered,
+                    'borderColor' => 'rgb(2, 132, 199)',
+                    'backgroundColor' => 'rgba(2, 132, 199, 0.12)',
                     'fill' => true,
                     'tension' => 0.35,
                 ],
@@ -87,7 +98,7 @@ class DeliveriesChart extends ChartWidget
     /**
      * @return array<string, int|string>
      */
-    protected function dailyStatusCounts(int|string $tenantId, string $status, CarbonInterface $from): array
+    protected function dailySuccessCounts(int|string $tenantId, CarbonInterface $from): array
     {
         $dateExpression = $this->dateExpression('created_at');
 
@@ -96,8 +107,32 @@ class DeliveriesChart extends ChartWidget
                 'pushNotification',
                 fn (Builder $query) => $query->where('company_id', $tenantId),
             )
-            ->where('status', $status)
+            ->whereIn('status', NotificationDelivery::SUCCESS_STATUSES)
             ->where('created_at', '>=', $from)
+            ->selectRaw("{$dateExpression} as day, COUNT(*) as aggregate")
+            ->groupBy('day')
+            ->pluck('aggregate', 'day')
+            ->all();
+    }
+
+    /**
+     * @return array<string, int|string>
+     */
+    protected function dailyStatusCounts(
+        int|string $tenantId,
+        string $status,
+        CarbonInterface $from,
+        string $column = 'created_at',
+    ): array {
+        $dateExpression = $this->dateExpression($column);
+
+        return NotificationDelivery::query()
+            ->whereHas(
+                'pushNotification',
+                fn (Builder $query) => $query->where('company_id', $tenantId),
+            )
+            ->where('status', $status)
+            ->where($column, '>=', $from)
             ->selectRaw("{$dateExpression} as day, COUNT(*) as aggregate")
             ->groupBy('day')
             ->pluck('aggregate', 'day')

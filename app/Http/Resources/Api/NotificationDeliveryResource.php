@@ -23,6 +23,7 @@ class NotificationDeliveryResource extends JsonResource
             'status' => $this->status,
             'error' => $this->error,
             'sent_at' => $this->sent_at,
+            'delivered_at' => $this->delivered_at,
             'created_at' => $this->created_at,
         ];
     }

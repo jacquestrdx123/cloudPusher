@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\MarkNotificationDelivered;
 use App\Http\Concerns\ResolvesCompanyApiUser;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\InboxItemResource;
@@ -16,6 +17,8 @@ use Illuminate\Http\Response;
 class InboxController extends Controller
 {
     use ResolvesCompanyApiUser;
+
+    public function __construct(private MarkNotificationDelivered $markNotificationDelivered) {}
 
     /**
      * List inbox notifications across all companies for the authenticated user.
@@ -60,6 +63,8 @@ class InboxController extends Controller
         if ($inbox->read_at === null) {
             $inbox->update(['read_at' => now()]);
         }
+
+        $this->markNotificationDelivered->handle($inbox);
 
         return new InboxItemResource($inbox->fresh()->load('company'));
     }
@@ -136,6 +141,8 @@ class InboxController extends Controller
         if ($inbox->read_at === null) {
             $inbox->update(['read_at' => now()]);
         }
+
+        $this->markNotificationDelivered->handle($inbox);
 
         return new InboxItemResource($inbox->fresh()->load('company'));
     }

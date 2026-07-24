@@ -53,15 +53,27 @@ class DeliveryStatsOverview extends StatsOverviewWidget
             ->count();
 
         $deliveriesSent = $this->deliveriesQuery($tenantId)
-            ->where('status', NotificationDelivery::STATUS_SENT)
+            ->whereIn('status', NotificationDelivery::SUCCESS_STATUSES)
             ->count();
         $deliveriesSentThisWeek = $this->deliveriesQuery($tenantId)
-            ->where('status', NotificationDelivery::STATUS_SENT)
+            ->whereIn('status', NotificationDelivery::SUCCESS_STATUSES)
             ->where('created_at', '>=', $thisWeekStart)
             ->count();
         $deliveriesSentPriorWeek = $this->deliveriesQuery($tenantId)
-            ->where('status', NotificationDelivery::STATUS_SENT)
+            ->whereIn('status', NotificationDelivery::SUCCESS_STATUSES)
             ->whereBetween('created_at', [$priorWeekStart, $priorWeekEnd])
+            ->count();
+
+        $deliveriesOpened = $this->deliveriesQuery($tenantId)
+            ->where('status', NotificationDelivery::STATUS_DELIVERED)
+            ->count();
+        $deliveriesOpenedThisWeek = $this->deliveriesQuery($tenantId)
+            ->where('status', NotificationDelivery::STATUS_DELIVERED)
+            ->where('delivered_at', '>=', $thisWeekStart)
+            ->count();
+        $deliveriesOpenedPriorWeek = $this->deliveriesQuery($tenantId)
+            ->where('status', NotificationDelivery::STATUS_DELIVERED)
+            ->whereBetween('delivered_at', [$priorWeekStart, $priorWeekEnd])
             ->count();
 
         $deliveriesFailed = $this->deliveriesQuery($tenantId)
@@ -96,12 +108,23 @@ class DeliveryStatsOverview extends StatsOverviewWidget
                 ->descriptionIcon($this->trendIcon($deliveriesSentThisWeek, $deliveriesSentPriorWeek))
                 ->descriptionColor($this->trendColor($deliveriesSentThisWeek, $deliveriesSentPriorWeek))
                 ->chart($this->dailyCounts(
-                    $this->deliveriesQuery($tenantId)->where('status', NotificationDelivery::STATUS_SENT),
+                    $this->deliveriesQuery($tenantId)->whereIn('status', NotificationDelivery::SUCCESS_STATUSES),
                     'created_at',
                     $thisWeekStart,
                 ))
                 ->color('success')
                 ->icon(Heroicon::OutlinedCheckCircle),
+            Stat::make('Opened in app', number_format($deliveriesOpened))
+                ->description($this->trendDescription($deliveriesOpenedThisWeek, $deliveriesOpenedPriorWeek, 'opened this week'))
+                ->descriptionIcon($this->trendIcon($deliveriesOpenedThisWeek, $deliveriesOpenedPriorWeek))
+                ->descriptionColor($this->trendColor($deliveriesOpenedThisWeek, $deliveriesOpenedPriorWeek))
+                ->chart($this->dailyCounts(
+                    $this->deliveriesQuery($tenantId)->where('status', NotificationDelivery::STATUS_DELIVERED),
+                    'delivered_at',
+                    $thisWeekStart,
+                ))
+                ->color('info')
+                ->icon(Heroicon::OutlinedEye),
             Stat::make('Deliveries failed', number_format($deliveriesFailed))
                 ->description(number_format($deliveriesFailedThisWeek).' failed this week')
                 ->descriptionIcon(Heroicon::OutlinedExclamationTriangle)

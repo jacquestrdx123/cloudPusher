@@ -232,22 +232,16 @@ it('deletes groups missing from the payload when delete_missing_groups is set', 
     expect(UserGroup::query()->whereKey($drop->id)->exists())->toBeFalse();
 });
 
-it('authenticates the sync endpoint with the provisioning key', function () {
-    config()->set('pushservice.sync.provisioning_key', 'prov-key');
-    $company = Company::factory()->create();
-
-    syncCompany($company, ['users' => [
-        ['name' => 'Jane', 'mobile_number' => '+27821234567', 'email' => 'jane@acme.test'],
-    ]], 'prov-key')
-        ->assertOk()
-        ->assertJsonPath('users.created', 1);
-});
-
 it('rejects an invalid sync token', function () {
-    config()->set('pushservice.sync.provisioning_key', 'prov-key');
     $company = Company::factory()->create();
 
     syncCompany($company, ['users' => []], 'nope')->assertUnauthorized();
+});
+
+it('does not expose a company provisioning endpoint', function () {
+    test()->postJson('/api/v1/companies', [
+        'name' => 'Acme Corp',
+    ])->assertNotFound();
 });
 
 it('validates that each user has a mobile_number', function () {

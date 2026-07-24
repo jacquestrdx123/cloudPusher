@@ -1,9 +1,7 @@
 <?php
 
 use App\Http\Middleware\AuthenticateCompanyOrUserToken;
-use App\Http\Middleware\AuthenticateCompanySyncToken;
 use App\Http\Middleware\AuthenticateCompanyToken;
-use App\Http\Middleware\AuthenticateProvisioningToken;
 use App\Http\Middleware\AuthenticateUserToken;
 use App\Http\Middleware\VerifyWebhookSignature;
 use App\Models\Company;
@@ -30,8 +28,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhook.signature' => VerifyWebhookSignature::class,
             'company.token' => AuthenticateCompanyToken::class,
             'company.or.user.token' => AuthenticateCompanyOrUserToken::class,
-            'company.sync.token' => AuthenticateCompanySyncToken::class,
-            'provisioning.token' => AuthenticateProvisioningToken::class,
             'user.token' => AuthenticateUserToken::class,
         ]);
     })

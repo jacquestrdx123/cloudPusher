@@ -31,6 +31,8 @@ trait ValidatesNotificationPayload
             'category' => ['nullable', 'string', 'max:64'],
             'android_channel_id' => ['nullable', 'string', 'max:64'],
             'data' => ['nullable', 'array'],
+            'data.url' => ['nullable', 'url', 'starts_with:https://', 'max:2048'],
+            'data.url_label' => ['nullable', 'string', 'max:100'],
             'channels' => ['nullable', 'array'],
             'channels.*' => [Rule::in(['push', 'mail', 'sms'])],
             'scheduled_at' => ['nullable', 'date', 'after:now'],

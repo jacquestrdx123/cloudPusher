@@ -38,7 +38,7 @@ class FinalizePushNotificationStatus implements ShouldQueue
         }
 
         $sentCount = $notification->deliveries()
-            ->where('status', NotificationDelivery::STATUS_SENT)
+            ->whereIn('status', NotificationDelivery::SUCCESS_STATUSES)
             ->count();
 
         $failedCount = $notification->deliveries()

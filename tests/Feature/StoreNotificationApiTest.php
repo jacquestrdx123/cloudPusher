@@ -119,3 +119,42 @@ it('falls back to company default channels when none are supplied', function () 
 
     expect(PushNotification::firstOrFail()->channels)->toBe(['mail', 'sms']);
 });
+
+it('persists data.url and data.url_label on the notification payload', function () {
+    Queue::fake();
+
+    $company = Company::factory()->create();
+    $user = User::factory()->forCompany($company)->create();
+
+    storeNotification($company, [
+        'target' => ['type' => 'user', 'id' => $user->id],
+        'title' => 'Power Failure',
+        'body' => 'Device is down',
+        'data' => [
+            'url' => 'https://wispmon.example.com/device/1123',
+            'url_label' => 'View device',
+            'type' => 'power_down',
+        ],
+        'channels' => ['push'],
+    ])
+        ->assertStatus(202)
+        ->assertJsonPath('data.payload.url', 'https://wispmon.example.com/device/1123')
+        ->assertJsonPath('data.payload.url_label', 'View device')
+        ->assertJsonPath('data.payload.type', 'power_down');
+});
+
+it('rejects a non-https data.url', function () {
+    $company = Company::factory()->create();
+    $user = User::factory()->forCompany($company)->create();
+
+    storeNotification($company, [
+        'target' => ['type' => 'user', 'id' => $user->id],
+        'title' => 'Hello',
+        'data' => [
+            'url' => 'http://insecure.example.com/device/1',
+            'url_label' => 'View device',
+        ],
+    ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors('data.url');
+});
