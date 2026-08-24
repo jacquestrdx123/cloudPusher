@@ -79,7 +79,12 @@
             </main>
 
             <footer class="relative z-10 border-t border-signal-mist/10 px-6 py-4 text-xs text-signal-mist/45 sm:px-10 lg:px-16 xl:px-24">
-                <p>Outbound messaging for your products — FCM, APNs, mail &amp; SMS.</p>
+                <p>
+                    Outbound messaging for your products — FCM, APNs, mail &amp; SMS.
+                    <a href="{{ route('support') }}" class="ml-2 hover:text-signal-mist">Support</a>
+                    ·
+                    <a href="{{ route('privacy') }}" class="hover:text-signal-mist">Privacy</a>
+                </p>
             </footer>
         </div>
     </body>

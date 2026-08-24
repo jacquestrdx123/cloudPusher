@@ -7,6 +7,8 @@ Route::view('/', 'welcome')->name('home');
 
 Route::view('/privacy', 'privacy')->name('privacy');
 
+Route::view('/support', 'support')->name('support');
+
 Route::get('/register', [ContactController::class, 'create'])->name('contact');
 Route::post('/register', [ContactController::class, 'store'])
     ->middleware('throttle:5,1')
