@@ -36,10 +36,23 @@ class LoginWithPassword
             ];
         }
 
+        $this->throwForPendingInvitation($user);
+
         $this->throwForPendingOrInvalidRegistration($normalized, $password);
 
         throw ValidationException::withMessages([
             'phone' => ['These credentials do not match our records.'],
+        ]);
+    }
+
+    private function throwForPendingInvitation(?User $user): void
+    {
+        if ($user === null || ! $user->invitations()->pending()->exists()) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'phone' => ['Your invitation has not been accepted yet. Use the link we sent you to set your password.'],
         ]);
     }
 

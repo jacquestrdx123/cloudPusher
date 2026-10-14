@@ -20,6 +20,7 @@ use Illuminate\Support\Str;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Company $company
+ * @property-read int|null $users_count
  */
 #[Fillable(['company_id', 'name', 'slug', 'external_id'])]
 class UserGroup extends Model

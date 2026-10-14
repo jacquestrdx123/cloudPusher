@@ -100,6 +100,14 @@ class User extends Authenticatable implements FilamentUser, HasDefaultTenant, Ha
     }
 
     /**
+     * @return HasMany<CompanyInvitation, $this>
+     */
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(CompanyInvitation::class);
+    }
+
+    /**
      * @return HasMany<UserApiToken, $this>
      */
     public function apiTokens(): HasMany

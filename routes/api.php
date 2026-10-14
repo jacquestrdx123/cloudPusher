@@ -1,10 +1,13 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\CompanyInvitationController;
 use App\Http\Controllers\Api\V1\CompanySyncController;
 use App\Http\Controllers\Api\V1\DeviceTokenController;
+use App\Http\Controllers\Api\V1\GroupController;
 use App\Http\Controllers\Api\V1\InboxController;
 use App\Http\Controllers\Api\V1\MemberController;
+use App\Http\Controllers\Api\V1\MessageController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\RegistrationController;
 use App\Http\Controllers\Api\WebhookController;
@@ -74,12 +77,39 @@ Route::prefix('v1/{company:slug}/registrations')
 Route::prefix('v1/{company:slug}/members')
     ->middleware(['user.token', 'throttle:push-api'])
     ->group(function (): void {
+        Route::get('/', [MemberController::class, 'index'])
+            ->name('api.v1.members.index');
+
         Route::post('/', [MemberController::class, 'store'])
             ->name('api.v1.members.store');
 
         Route::delete('{user}', [MemberController::class, 'destroy'])
             ->name('api.v1.members.destroy');
     });
+
+Route::prefix('v1/{company:slug}/invitations')
+    ->middleware(['user.token', 'throttle:push-api'])
+    ->group(function (): void {
+        Route::get('/', [CompanyInvitationController::class, 'index'])
+            ->name('api.v1.invitations.index');
+
+        Route::post('/', [CompanyInvitationController::class, 'store'])
+            ->name('api.v1.invitations.store');
+
+        Route::post('{invitation}/resend', [CompanyInvitationController::class, 'resend'])
+            ->name('api.v1.invitations.resend');
+
+        Route::delete('{invitation}', [CompanyInvitationController::class, 'destroy'])
+            ->name('api.v1.invitations.destroy');
+    });
+
+Route::get('v1/{company:slug}/groups', [GroupController::class, 'index'])
+    ->middleware(['user.token', 'throttle:push-api'])
+    ->name('api.v1.groups.index');
+
+Route::post('v1/{company:slug}/messages', [MessageController::class, 'store'])
+    ->middleware(['user.token', 'throttle:mobile-message'])
+    ->name('api.v1.messages.store');
 
 Route::prefix('v1/{company:slug}')
     ->middleware(['company.or.user.token', 'throttle:push-api'])

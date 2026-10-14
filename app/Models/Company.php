@@ -94,6 +94,14 @@ class Company extends Model implements HasCurrentTenantLabel, HasName
     }
 
     /**
+     * @return HasMany<CompanyInvitation, $this>
+     */
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(CompanyInvitation::class);
+    }
+
+    /**
      * @return HasMany<PushNotification, $this>
      */
     public function pushNotifications(): HasMany

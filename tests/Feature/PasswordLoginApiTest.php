@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Company;
+use App\Models\CompanyInvitation;
 use App\Models\User;
 use App\Models\UserApiToken;
 use App\Models\UserNotification;
@@ -37,6 +38,43 @@ it('rejects invalid login credentials', function () {
         'phone' => '+27821234567',
         'password' => 'wrong-password',
     ])->assertUnprocessable();
+});
+
+it('tells invited users who have not set a password yet to use their invitation link', function () {
+    $company = Company::factory()->create();
+    $user = User::factory()->forCompany($company)->create(['phone' => '+27821234567']);
+    CompanyInvitation::factory()->for($company)->for($user)->create();
+
+    test()->postJson(route('api.v1.auth.login'), [
+        'phone' => '+27821234567',
+        'password' => 'guess',
+    ])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.phone.0', 'Your invitation has not been accepted yet. Use the link we sent you to set your password.');
+});
+
+it('returns a readable json message when login attempts are rate limited', function () {
+    config(['pushservice.auth.login_rate_limit' => 2]);
+
+    $company = Company::factory()->create();
+    User::factory()->forCompany($company)->create([
+        'phone' => '+27821234567',
+        'password' => 'password',
+    ]);
+
+    foreach (range(1, 2) as $attempt) {
+        test()->postJson(route('api.v1.auth.login'), [
+            'phone' => '+27821234567',
+            'password' => 'wrong-password',
+        ])->assertUnprocessable();
+    }
+
+    test()->postJson(route('api.v1.auth.login'), [
+        'phone' => '+27821234567',
+        'password' => 'password',
+    ])
+        ->assertTooManyRequests()
+        ->assertJsonPath('message', 'Too many attempts. Please wait a minute and try again.');
 });
 
 it('allows inbox access after password login', function () {

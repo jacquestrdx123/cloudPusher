@@ -102,6 +102,29 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Support Contact
+    |--------------------------------------------------------------------------
+    |
+    | Direct e-mail address shown on the public support page (App Store
+    | Support URL). Falls back to the mail "from" address.
+    |
+    */
+
+    'support_email' => env('PUSH_SUPPORT_EMAIL', env('MAIL_FROM_ADDRESS')),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Company Invitations
+    |--------------------------------------------------------------------------
+    |
+    | Days an admin-issued invitation link stays valid before it must be resent.
+    |
+    */
+
+    'invitation_ttl_days' => (int) env('PUSH_INVITATION_TTL_DAYS', 7),
+
+    /*
+    |--------------------------------------------------------------------------
     | Mobile Login
     |--------------------------------------------------------------------------
     |
@@ -111,6 +134,8 @@ return [
 
     'auth' => [
         'otp_rate_limit' => (int) env('PUSH_OTP_RATE_LIMIT', 5),
+        'login_rate_limit' => (int) env('PUSH_LOGIN_RATE_LIMIT', 10),
+        'message_rate_limit' => (int) env('PUSH_MESSAGE_RATE_LIMIT', 30),
         'token_ttl_days' => (int) env('PUSH_USER_TOKEN_TTL_DAYS', 90),
     ],
 

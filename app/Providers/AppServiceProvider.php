@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\Company;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -72,8 +73,19 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('mobile-login', function (Request $request) {
             $phone = (string) $request->input('phone', '');
 
-            return Limit::perMinute((int) config('pushservice.auth.otp_rate_limit', 5))
-                ->by($request->ip().'|'.$phone);
+            return Limit::perMinute((int) config('pushservice.auth.login_rate_limit', 10))
+                ->by($request->ip().'|'.$phone)
+                ->response(fn (Request $request, array $headers): JsonResponse => response()->json([
+                    'message' => 'Too many attempts. Please wait a minute and try again.',
+                ], 429, $headers));
+        });
+
+        RateLimiter::for('mobile-message', function (Request $request) {
+            return Limit::perMinute((int) config('pushservice.auth.message_rate_limit', 30))
+                ->by('user:'.($request->user()?->getAuthIdentifier() ?? $request->ip()))
+                ->response(fn (Request $request, array $headers): JsonResponse => response()->json([
+                    'message' => 'You are sending messages too quickly. Please wait a minute and try again.',
+                ], 429, $headers));
         });
     }
 

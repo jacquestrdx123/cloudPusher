@@ -16,6 +16,7 @@ use Illuminate\Support\Carbon;
  * @property string $target_type
  * @property int|null $user_id
  * @property int|null $user_group_id
+ * @property int|null $sent_by_user_id
  * @property string $title
  * @property string|null $body
  * @property string|null $image_url
@@ -32,9 +33,10 @@ use Illuminate\Support\Carbon;
  * @property-read Company $company
  * @property-read User $user
  * @property-read UserGroup $group
+ * @property-read User|null $sender
  */
 #[Fillable([
-    'company_id', 'target_type', 'user_id', 'user_group_id',
+    'company_id', 'target_type', 'user_id', 'user_group_id', 'sent_by_user_id',
     'title', 'body', 'image_url', 'sound', 'category', 'android_channel_id',
     'data', 'channels', 'status', 'recipients_count', 'scheduled_at',
 ])]
@@ -103,6 +105,16 @@ class PushNotification extends Model
     public function group(): BelongsTo
     {
         return $this->belongsTo(UserGroup::class, 'user_group_id');
+    }
+
+    /**
+     * Company member who sent the message from the mobile app, if any.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function sender(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'sent_by_user_id');
     }
 
     /**

@@ -66,6 +66,26 @@
                         </section>
 
                         <section class="space-y-3">
+                            <h2 class="font-display text-xl font-semibold text-white">Send messages</h2>
+                            <p>
+                                Open the <strong class="font-medium text-white">Send</strong> tab to message
+                                one colleague, several people, a group, or everyone in your company. Recipients
+                                get a push notification and the message appears in their inbox.
+                            </p>
+                        </section>
+
+                        <section class="space-y-3">
+                            <h2 class="font-display text-xl font-semibold text-white">Add team members</h2>
+                            <p>
+                                Company admins can add people from the <strong class="font-medium text-white">Approvals</strong>
+                                tab. Enter their name, mobile number, and e-mail, and choose whether they should also be a
+                                company admin. New people receive an invitation link to set their own password; the link
+                                expires after {{ trans_choice(':count day|:count days', max(1, (int) config('pushservice.invitation_ttl_days', 7))) }} and can be resent or revoked from the pending invitations list.
+                                People who already use cloudPusher are added straight away.
+                            </p>
+                        </section>
+
+                        <section class="space-y-3">
                             <h2 class="font-display text-xl font-semibold text-white">Delete your account</h2>
                             <p>
                                 You can permanently delete your account in the app under
@@ -82,6 +102,13 @@
                                 for access requests, account issues, or privacy questions. You can also ask
                                 the administrator who invited you to cloudPusher.
                             </p>
+                            @if (filled($supportEmail = config('pushservice.support_email')))
+                                <p>
+                                    E-mail support directly at
+                                    <a href="mailto:{{ $supportEmail }}" class="text-signal-teal underline-offset-2 hover:underline">{{ $supportEmail }}</a>.
+                                    We reply within two business days.
+                                </p>
+                            @endif
                             <p>
                                 Privacy details are on our
                                 <a href="{{ route('privacy') }}" class="text-signal-teal underline-offset-2 hover:underline">privacy policy</a>.

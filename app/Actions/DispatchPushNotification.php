@@ -28,7 +28,7 @@ class DispatchPushNotification
      *     scheduled_at?: string|null
      * }  $payload
      */
-    public function handle(Company $company, array $payload): PushNotification
+    public function handle(Company $company, array $payload, ?User $sender = null): PushNotification
     {
         $target = $payload['target'];
         $userId = null;
@@ -59,6 +59,7 @@ class DispatchPushNotification
             'target_type' => $target['type'],
             'user_id' => $userId,
             'user_group_id' => $groupId,
+            'sent_by_user_id' => $sender?->id,
             'title' => $payload['title'],
             'body' => $payload['body'] ?? null,
             'image_url' => $payload['image_url'] ?? null,
