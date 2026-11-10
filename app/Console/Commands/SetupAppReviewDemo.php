@@ -27,8 +27,6 @@ class SetupAppReviewDemo extends Command
 
     public const string COMPANY_NAME = 'Demo Company';
 
-    public const string APPLICANT_PHONE = '+27000000001';
-
     public function handle(): int
     {
         $phones = [
@@ -131,18 +129,26 @@ class SetupAppReviewDemo extends Command
     {
         UserRegistration::query()->where('company_id', $company->id)->delete();
 
-        if (User::query()->where('phone', self::APPLICANT_PHONE)->exists()) {
-            return;
-        }
-
         UserRegistration::query()->create([
             'company_id' => $company->id,
             'name' => 'Jordan Applicant',
             'email' => 'app-review-applicant@example.com',
-            'phone' => self::APPLICANT_PHONE,
+            'phone' => $this->unusedPhone(),
             'password' => Hash::make(Str::random(40)),
             'status' => UserRegistrationStatus::Pending,
         ]);
+    }
+
+    /**
+     * A number no user has, so approving the applicant can never attach a real person to the demo company.
+     */
+    private function unusedPhone(): string
+    {
+        do {
+            $phone = '+27000'.random_int(1000000, 9999999);
+        } while (User::query()->where('phone', $phone)->exists());
+
+        return $phone;
     }
 
     /**
@@ -200,7 +206,7 @@ class SetupAppReviewDemo extends Command
             [
                 'title' => 'Welcome to cloudPusher',
                 'body' => 'Notifications from your company arrive here. Tap one to see the details.',
-                'data' => ['image' => url('apple-touch-icon.png')],
+                'data' => ['image' => url('images/app-review-welcome.png')],
                 'read' => false,
             ],
             [

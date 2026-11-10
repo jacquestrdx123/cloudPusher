@@ -62,7 +62,7 @@ it('removes members a previous review run approved, but keeps users of other com
     $company = Company::where('slug', SetupAppReviewDemo::COMPANY_SLUG)->firstOrFail();
     $otherCompany = Company::factory()->create();
 
-    $approved = User::factory()->forCompany($company)->create(['phone' => SetupAppReviewDemo::APPLICANT_PHONE]);
+    $approved = User::factory()->forCompany($company)->create();
     $shared = User::factory()->forCompany($otherCompany)->create();
     $company->users()->attach($shared->id, ['is_company_admin' => false]);
 
@@ -128,4 +128,39 @@ it('refuses two identical mobile numbers', function () {
         ->assertFailed();
 
     expect(User::count())->toBe(0);
+});
+
+it('lists the pending applicant to the demo admin through the api', function () {
+    $password = runAppReviewDemo();
+
+    $token = test()->postJson(route('api.v1.auth.login'), [
+        'phone' => '+27600000001',
+        'password' => $password,
+    ])->json('token');
+
+    test()->withToken($token)
+        ->getJson(route('api.v1.registrations.index', [
+            'company' => SetupAppReviewDemo::COMPANY_SLUG,
+            'status' => 'pending',
+        ]))
+        ->assertSuccessful()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.name', 'Jordan Applicant');
+});
+
+it('gives the applicant a number no existing user has', function () {
+    runAppReviewDemo();
+
+    $registration = UserRegistration::firstOrFail();
+
+    expect(User::where('phone', $registration->phone)->exists())->toBeFalse()
+        ->and($registration->phone)->toStartWith('+27000');
+});
+
+it('points the welcome notification at an image that ships with the app', function () {
+    runAppReviewDemo();
+
+    $image = PushNotification::where('title', 'Welcome to cloudPusher')->firstOrFail()->image_url;
+
+    expect(public_path(ltrim(parse_url($image, PHP_URL_PATH), '/')))->toBeFile();
 });
