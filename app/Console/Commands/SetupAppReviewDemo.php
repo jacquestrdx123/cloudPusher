@@ -17,8 +17,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
-use function Laravel\Prompts\password;
-
 #[Signature('app-review:demo
     {phoneOne : Mobile number for the first demo account (the one given to App Review)}
     {phoneTwo : Mobile number for the second demo account (the colleague)}')]
@@ -52,11 +50,7 @@ class SetupAppReviewDemo extends Command
             }
         }
 
-        $password = password(
-            label: 'Password for both demo accounts',
-            required: true,
-            validate: fn (string $value): ?string => strlen($value) < 8 ? 'Use at least 8 characters.' : null,
-        );
+        $password = Str::password(16, symbols: false);
 
         DB::transaction(function () use ($phones, $password): void {
             $company = Company::query()->updateOrCreate(
@@ -67,6 +61,7 @@ class SetupAppReviewDemo extends Command
             $reviewerOne = $this->demoUser($company, 'Alex Reviewer', 'app-review-1@example.com', $phones[0], $password, isCompanyAdmin: true);
             $reviewerTwo = $this->demoUser($company, 'Sam Colleague', 'app-review-2@example.com', $phones[1], $password);
 
+            $this->removeOtherMembers($company, $reviewerOne, $reviewerTwo);
             $this->resetInbox($company, $reviewerOne, $reviewerTwo);
             $this->resetPendingRegistration($company);
         });
@@ -74,6 +69,8 @@ class SetupAppReviewDemo extends Command
         $this->components->info('Demo company ready: '.self::COMPANY_NAME.' ('.self::COMPANY_SLUG.')');
         $this->components->twoColumnDetail('Account one (App Review sign-in, company admin)', $phones[0]);
         $this->components->twoColumnDetail('Account two (colleague)', $phones[1]);
+        $this->components->twoColumnDetail('Password (both accounts)', $password);
+        $this->components->warn('The password is shown once and changes every time this command runs.');
 
         return self::SUCCESS;
     }
@@ -106,14 +103,33 @@ class SetupAppReviewDemo extends Command
     }
 
     /**
+     * Remove whoever a previous review run approved or invited into the demo company.
+     * Users who also belong to another company only lose their demo membership.
+     */
+    private function removeOtherMembers(Company $company, User $reviewerOne, User $reviewerTwo): void
+    {
+        $company->invitations()->delete();
+
+        $others = $company->users()
+            ->whereNotIn('users.id', [$reviewerOne->id, $reviewerTwo->id])
+            ->withCount('companies')
+            ->get();
+
+        foreach ($others as $other) {
+            $company->users()->detach($other->id);
+
+            if ($other->companies_count === 1 && ! $other->isGlobalAdmin()) {
+                $other->delete();
+            }
+        }
+    }
+
+    /**
      * Leave one pending registration so the Approvals tab has something to approve or reject.
      */
     private function resetPendingRegistration(Company $company): void
     {
-        UserRegistration::query()
-            ->where('company_id', $company->id)
-            ->where('status', UserRegistrationStatus::Pending)
-            ->delete();
+        UserRegistration::query()->where('company_id', $company->id)->delete();
 
         if (User::query()->where('phone', self::APPLICANT_PHONE)->exists()) {
             return;

@@ -8,14 +8,22 @@ use App\Models\User;
 use App\Models\UserNotification;
 use App\Models\UserRegistration;
 
-function runAppReviewDemo(string $phoneOne = '+27600000001', string $phoneTwo = '+27600000002')
+/**
+ * Run the command and return the password it generated.
+ */
+function runAppReviewDemo(string $phoneOne = '+27600000001', string $phoneTwo = '+27600000002'): string
 {
-    return test()->artisan('app-review:demo', ['phoneOne' => $phoneOne, 'phoneTwo' => $phoneTwo])
-        ->expectsQuestion('Password for both demo accounts', 'review-pass-123');
+    $exitCode = Artisan::call('app-review:demo', ['phoneOne' => $phoneOne, 'phoneTwo' => $phoneTwo]);
+
+    expect($exitCode)->toBe(0);
+
+    preg_match('/Password \(both accounts\)[ .]+([A-Za-z0-9]{16})\s/', Artisan::output(), $matches);
+
+    return $matches[1] ?? '';
 }
 
 it('creates the demo company with two accounts that can sign in', function () {
-    runAppReviewDemo()->assertSuccessful();
+    $password = runAppReviewDemo();
 
     $company = Company::where('slug', SetupAppReviewDemo::COMPANY_SLUG)->firstOrFail();
     $reviewerOne = User::where('phone', '+27600000001')->firstOrFail();
@@ -28,14 +36,49 @@ it('creates the demo company with two accounts that can sign in', function () {
 
     test()->postJson(route('api.v1.auth.login'), [
         'phone' => '+27600000001',
-        'password' => 'review-pass-123',
+        'password' => $password,
     ])
         ->assertSuccessful()
         ->assertJsonPath('user.id', $reviewerOne->id);
 });
 
+it('generates a new random password on every run', function () {
+    $first = runAppReviewDemo();
+    $second = runAppReviewDemo();
+
+    expect($first)->toHaveLength(16)
+        ->and($second)->toHaveLength(16)
+        ->and($second)->not->toBe($first);
+
+    test()->postJson(route('api.v1.auth.login'), ['phone' => '+27600000002', 'password' => $first])
+        ->assertUnprocessable();
+    test()->postJson(route('api.v1.auth.login'), ['phone' => '+27600000002', 'password' => $second])
+        ->assertSuccessful();
+});
+
+it('removes members a previous review run approved, but keeps users of other companies', function () {
+    runAppReviewDemo();
+
+    $company = Company::where('slug', SetupAppReviewDemo::COMPANY_SLUG)->firstOrFail();
+    $otherCompany = Company::factory()->create();
+
+    $approved = User::factory()->forCompany($company)->create(['phone' => SetupAppReviewDemo::APPLICANT_PHONE]);
+    $shared = User::factory()->forCompany($otherCompany)->create();
+    $company->users()->attach($shared->id, ['is_company_admin' => false]);
+
+    runAppReviewDemo();
+
+    expect(User::whereKey($approved->id)->exists())->toBeFalse()
+        ->and($company->users()->count())->toBe(2)
+        ->and($shared->fresh()->belongsToCompany($otherCompany))->toBeTrue()
+        ->and($shared->fresh()->belongsToCompany($company))->toBeFalse()
+        ->and(UserRegistration::where('company_id', $company->id)
+            ->where('status', UserRegistrationStatus::Pending)
+            ->count())->toBe(1);
+});
+
 it('seeds a sample inbox and a pending registration for the demo company', function () {
-    runAppReviewDemo()->assertSuccessful();
+    runAppReviewDemo();
 
     $company = Company::where('slug', SetupAppReviewDemo::COMPANY_SLUG)->firstOrFail();
     $reviewerOne = User::where('phone', '+27600000001')->firstOrFail();
@@ -53,8 +96,8 @@ it('can be run again without duplicating data or touching other companies', func
     $otherUser = User::factory()->forCompany($otherCompany)->create();
     UserNotification::factory()->forUser($otherUser)->create();
 
-    runAppReviewDemo()->assertSuccessful();
-    runAppReviewDemo()->assertSuccessful();
+    runAppReviewDemo();
+    runAppReviewDemo();
 
     $company = Company::where('slug', SetupAppReviewDemo::COMPANY_SLUG)->firstOrFail();
 
