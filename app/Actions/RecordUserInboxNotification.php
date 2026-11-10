@@ -11,7 +11,14 @@ use Illuminate\Support\Carbon;
 class RecordUserInboxNotification
 {
     /**
-     * Persist a user-facing inbox row when a notification is successfully delivered.
+     * Channel stored while no provider has confirmed delivery yet.
+     */
+    public const string CHANNEL_INBOX = 'inbox';
+
+    /**
+     * Persist a user-facing inbox row. Every recipient gets one when the notification is
+     * fanned out, so it is readable in the app even if no push reaches the device; the
+     * channel is filled in once a provider delivers it.
      */
     public function handle(
         WebhookPushNotification $notification,
@@ -32,6 +39,8 @@ class RecordUserInboxNotification
             $inbox->data = $notification->data;
             $inbox->channel = $channel;
             $inbox->delivered_at = Carbon::now();
+        } elseif ($inbox->channel === self::CHANNEL_INBOX) {
+            $inbox->channel = $channel;
         }
 
         $inbox->save();

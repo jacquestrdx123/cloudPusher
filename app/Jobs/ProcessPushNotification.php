@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\RecordUndeliverableNotification;
+use App\Actions\RecordUserInboxNotification;
 use App\Models\PushNotification;
 use App\Models\User;
 use App\Notifications\WebhookPushNotification;
@@ -33,6 +34,7 @@ class ProcessPushNotification implements ShouldQueue
     public function handle(): void
     {
         $recordUndeliverable = app(RecordUndeliverableNotification::class);
+        $recordInbox = app(RecordUserInboxNotification::class);
         $notification = $this->pushNotification;
         $notification->update(['status' => PushNotification::STATUS_PROCESSING]);
 
@@ -69,6 +71,8 @@ class ProcessPushNotification implements ShouldQueue
         $deliverable = new Collection;
 
         foreach ($recipients as $user) {
+            $recordInbox->handle($outbound, $user, RecordUserInboxNotification::CHANNEL_INBOX);
+
             // Always record skipped push/mail/sms channels, even when another
             // channel (e.g. mail) still delivers — otherwise push fails silently.
             $recordUndeliverable->handle($notification, $user, $outbound);

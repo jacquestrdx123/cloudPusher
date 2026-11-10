@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\RecordUserInboxNotification;
 use App\Jobs\ProcessPushNotification;
 use App\Models\Company;
 use App\Models\DeviceToken;
@@ -7,7 +8,9 @@ use App\Models\NotificationDelivery;
 use App\Models\PushNotification;
 use App\Models\User;
 use App\Models\UserGroup;
+use App\Models\UserNotification;
 use App\Notifications\WebhookPushNotification;
+use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Support\Facades\Notification;
 use NotificationChannels\Fcm\FcmChannel;
 
@@ -145,4 +148,49 @@ it('records a delivery row per channel actually sent', function () {
         ->and($delivery->status)->toBe(NotificationDelivery::STATUS_SENT)
         ->and($delivery->user_id)->toBe($user->id)
         ->and($delivery->sent_at)->not->toBeNull();
+});
+
+it('puts the notification in the inbox of a recipient who has no device tokens', function () {
+    config()->set('pushservice.providers.fcm', true);
+    config()->set('pushservice.providers.apns', true);
+    Notification::fake();
+
+    $user = User::factory()->create();
+    $notification = PushNotification::factory()->forUser($user)->create([
+        'channels' => ['push'],
+        'title' => 'Lunch order',
+        'data' => ['sender_name' => 'Alex Reviewer'],
+    ]);
+
+    (new ProcessPushNotification($notification))->handle();
+
+    $inbox = UserNotification::where('user_id', $user->id)->sole();
+
+    expect($inbox)
+        ->push_notification_id->toBe($notification->id)
+        ->company_id->toBe($notification->company_id)
+        ->title->toBe('Lunch order')
+        ->channel->toBe(RecordUserInboxNotification::CHANNEL_INBOX)
+        ->delivered_at->not->toBeNull()
+        ->and($inbox->data)->toMatchArray(['sender_name' => 'Alex Reviewer']);
+});
+
+it('keeps one inbox row per recipient and fills in the channel once a provider delivers', function () {
+    Notification::fake();
+
+    $user = User::factory()->create();
+    $notification = PushNotification::factory()->forUser($user)->create(['channels' => ['mail']]);
+
+    (new ProcessPushNotification($notification))->handle();
+
+    $outbound = new WebhookPushNotification(
+        pushNotificationId: $notification->id,
+        title: $notification->title,
+        body: $notification->body,
+        channels: ['mail'],
+    );
+
+    event(new NotificationSent($user, $outbound, 'mail'));
+
+    expect(UserNotification::where('user_id', $user->id)->sole()->channel)->toBe('mail');
 });
